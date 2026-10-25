@@ -125,10 +125,290 @@ CREATE TABLE devices (
   current_invoice_line_id uuid,
   received_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
-  CHECK (imei_1 IS NOT NULL OR imei_2 IS NOT NULL OR serial_number IS NOT NULL OR barcode IS NOT NULL)
+  CHECK (imei_1 IS NOT NULL OR imei_2 IS NOT NULL OR serial_number IS NOT NULL OR barcode IS NOT NULL),
+  CHECK (imei_1 IS NULL OR imei_1 ~ '^[0-9]{15}
+
+CREATE TABLE sales_invoices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_number text NOT NULL UNIQUE,
+  financial_year text NOT NULL,
+  invoice_kind invoice_kind NOT NULL,
+  buyer_id uuid REFERENCES parties(id),
+  source_purchase_id uuid REFERENCES purchase_documents(id),
+  invoice_date date NOT NULL DEFAULT CURRENT_DATE,
+  document_status invoice_status NOT NULL DEFAULT 'draft',
+  price_mode text NOT NULL DEFAULT 'inclusive' CHECK (price_mode IN ('inclusive','exclusive')),
+  supply_type text NOT NULL CHECK (supply_type IN ('intra_state','inter_state')),
+  supplier_gstin text,
+  buyer_gstin text,
+  place_of_supply_state_code text,
+  taxable_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (taxable_total >= 0),
+  cgst_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (cgst_total >= 0),
+  sgst_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (sgst_total >= 0),
+  igst_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (igst_total >= 0),
+  discount_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (discount_total >= 0),
+  rounding_adjustment numeric(8,2) NOT NULL DEFAULT 0,
+  grand_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (grand_total >= 0),
+  amount_paid numeric(14,2) NOT NULL DEFAULT 0 CHECK (amount_paid >= 0),
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  issued_at timestamptz,
+  CHECK (
+    (supply_type = 'intra_state' AND igst_total = 0)
+    OR
+    (supply_type = 'inter_state' AND cgst_total = 0 AND sgst_total = 0)
+  )
+);
+CREATE INDEX sales_invoices_date_idx ON sales_invoices(invoice_date DESC);
+CREATE INDEX sales_invoices_buyer_date_idx ON sales_invoices(buyer_id, invoice_date DESC);
+
+CREATE TABLE sales_invoice_lines (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id uuid NOT NULL REFERENCES sales_invoices(id),
+  product_id uuid REFERENCES products(id),
+  device_id uuid REFERENCES devices(id),
+  description_snapshot text NOT NULL,
+  sku_snapshot text,
+  hsn_snapshot text,
+  imei_snapshot text,
+  serial_snapshot text,
+  barcode_snapshot text,
+  quantity numeric(14,3) NOT NULL CHECK (quantity > 0),
+  unit_price numeric(14,2) NOT NULL CHECK (unit_price >= 0),
+  discount_amount numeric(14,2) NOT NULL DEFAULT 0 CHECK (discount_amount >= 0),
+  taxable_amount numeric(14,2) NOT NULL CHECK (taxable_amount >= 0),
+  tax_rate numeric(5,2) NOT NULL CHECK (tax_rate >= 0 AND tax_rate <= 100),
+  cgst_amount numeric(14,2) NOT NULL DEFAULT 0 CHECK (cgst_amount >= 0),
+  sgst_amount numeric(14,2) NOT NULL DEFAULT 0 CHECK (sgst_amount >= 0),
+  igst_amount numeric(14,2) NOT NULL DEFAULT 0 CHECK (igst_amount >= 0),
+  total_amount numeric(14,2) NOT NULL CHECK (total_amount >= 0)
+);
+CREATE INDEX sales_invoice_lines_invoice_idx ON sales_invoice_lines(invoice_id);
+CREATE INDEX sales_invoice_lines_device_idx ON sales_invoice_lines(device_id);
+
+CREATE TABLE stock_movements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL REFERENCES products(id),
+  device_id uuid REFERENCES devices(id),
+  movement_kind stock_movement_kind NOT NULL,
+  quantity_delta numeric(14,3) NOT NULL CHECK (quantity_delta <> 0),
+  purchase_line_id uuid REFERENCES purchase_lines(id),
+  invoice_line_id uuid REFERENCES sales_invoice_lines(id),
+  party_id uuid REFERENCES parties(id),
+  reason text,
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX stock_movements_product_date_idx ON stock_movements(product_id, created_at DESC);
+CREATE INDEX stock_movements_device_date_idx ON stock_movements(device_id, created_at DESC) WHERE device_id IS NOT NULL;
+
+CREATE TABLE payment_entries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  party_id uuid NOT NULL REFERENCES parties(id),
+  payment_direction text NOT NULL CHECK (payment_direction IN ('receipt','supplier_payment')),
+  payment_method text NOT NULL CHECK (payment_method IN ('cash','upi','bank_transfer','cheque','other')),
+  amount numeric(14,2) NOT NULL CHECK (amount > 0),
+  payment_date date NOT NULL DEFAULT CURRENT_DATE,
+  reference_number text,
+  notes text,
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE payment_allocations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  payment_id uuid NOT NULL REFERENCES payment_entries(id),
+  invoice_id uuid NOT NULL REFERENCES sales_invoices(id),
+  amount numeric(14,2) NOT NULL CHECK (amount > 0),
+  UNIQUE(payment_id, invoice_id)
+);
+
+CREATE TABLE accounting_sync_queue (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_kind text NOT NULL,
+  source_id uuid NOT NULL,
+  target_system text NOT NULL DEFAULT 'tallyprime',
+  sync_status sync_status NOT NULL DEFAULT 'pending',
+  idempotency_key text NOT NULL UNIQUE,
+  attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  tally_voucher_id text,
+  last_error text,
+  requested_at timestamptz NOT NULL DEFAULT now(),
+  completed_at timestamptz,
+  UNIQUE(source_kind, source_id, target_system)
+);
+CREATE INDEX accounting_sync_queue_pending_idx ON accounting_sync_queue(sync_status, requested_at);
+
+CREATE TABLE audit_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id uuid,
+  action text NOT NULL,
+  entity_type text NOT NULL,
+  entity_id uuid,
+  before_data jsonb,
+  after_data jsonb,
+  reason text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX audit_events_entity_idx ON audit_events(entity_type, entity_id, created_at DESC);
+),
+  CHECK (imei_2 IS NULL OR imei_2 ~ '^[0-9]{15}
+
+CREATE TABLE sales_invoices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_number text NOT NULL UNIQUE,
+  financial_year text NOT NULL,
+  invoice_kind invoice_kind NOT NULL,
+  buyer_id uuid REFERENCES parties(id),
+  source_purchase_id uuid REFERENCES purchase_documents(id),
+  invoice_date date NOT NULL DEFAULT CURRENT_DATE,
+  document_status invoice_status NOT NULL DEFAULT 'draft',
+  price_mode text NOT NULL DEFAULT 'inclusive' CHECK (price_mode IN ('inclusive','exclusive')),
+  supply_type text NOT NULL CHECK (supply_type IN ('intra_state','inter_state')),
+  supplier_gstin text,
+  buyer_gstin text,
+  place_of_supply_state_code text,
+  taxable_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (taxable_total >= 0),
+  cgst_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (cgst_total >= 0),
+  sgst_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (sgst_total >= 0),
+  igst_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (igst_total >= 0),
+  discount_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (discount_total >= 0),
+  rounding_adjustment numeric(8,2) NOT NULL DEFAULT 0,
+  grand_total numeric(14,2) NOT NULL DEFAULT 0 CHECK (grand_total >= 0),
+  amount_paid numeric(14,2) NOT NULL DEFAULT 0 CHECK (amount_paid >= 0),
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  issued_at timestamptz,
+  CHECK (
+    (supply_type = 'intra_state' AND igst_total = 0)
+    OR
+    (supply_type = 'inter_state' AND cgst_total = 0 AND sgst_total = 0)
+  )
+);
+CREATE INDEX sales_invoices_date_idx ON sales_invoices(invoice_date DESC);
+CREATE INDEX sales_invoices_buyer_date_idx ON sales_invoices(buyer_id, invoice_date DESC);
+
+CREATE TABLE sales_invoice_lines (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id uuid NOT NULL REFERENCES sales_invoices(id),
+  product_id uuid REFERENCES products(id),
+  device_id uuid REFERENCES devices(id),
+  description_snapshot text NOT NULL,
+  sku_snapshot text,
+  hsn_snapshot text,
+  imei_snapshot text,
+  serial_snapshot text,
+  barcode_snapshot text,
+  quantity numeric(14,3) NOT NULL CHECK (quantity > 0),
+  unit_price numeric(14,2) NOT NULL CHECK (unit_price >= 0),
+  discount_amount numeric(14,2) NOT NULL DEFAULT 0 CHECK (discount_amount >= 0),
+  taxable_amount numeric(14,2) NOT NULL CHECK (taxable_amount >= 0),
+  tax_rate numeric(5,2) NOT NULL CHECK (tax_rate >= 0 AND tax_rate <= 100),
+  cgst_amount numeric(14,2) NOT NULL DEFAULT 0 CHECK (cgst_amount >= 0),
+  sgst_amount numeric(14,2) NOT NULL DEFAULT 0 CHECK (sgst_amount >= 0),
+  igst_amount numeric(14,2) NOT NULL DEFAULT 0 CHECK (igst_amount >= 0),
+  total_amount numeric(14,2) NOT NULL CHECK (total_amount >= 0)
+);
+CREATE INDEX sales_invoice_lines_invoice_idx ON sales_invoice_lines(invoice_id);
+CREATE INDEX sales_invoice_lines_device_idx ON sales_invoice_lines(device_id);
+
+CREATE TABLE stock_movements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL REFERENCES products(id),
+  device_id uuid REFERENCES devices(id),
+  movement_kind stock_movement_kind NOT NULL,
+  quantity_delta numeric(14,3) NOT NULL CHECK (quantity_delta <> 0),
+  purchase_line_id uuid REFERENCES purchase_lines(id),
+  invoice_line_id uuid REFERENCES sales_invoice_lines(id),
+  party_id uuid REFERENCES parties(id),
+  reason text,
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX stock_movements_product_date_idx ON stock_movements(product_id, created_at DESC);
+CREATE INDEX stock_movements_device_date_idx ON stock_movements(device_id, created_at DESC) WHERE device_id IS NOT NULL;
+
+CREATE TABLE payment_entries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  party_id uuid NOT NULL REFERENCES parties(id),
+  payment_direction text NOT NULL CHECK (payment_direction IN ('receipt','supplier_payment')),
+  payment_method text NOT NULL CHECK (payment_method IN ('cash','upi','bank_transfer','cheque','other')),
+  amount numeric(14,2) NOT NULL CHECK (amount > 0),
+  payment_date date NOT NULL DEFAULT CURRENT_DATE,
+  reference_number text,
+  notes text,
+  created_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE payment_allocations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  payment_id uuid NOT NULL REFERENCES payment_entries(id),
+  invoice_id uuid NOT NULL REFERENCES sales_invoices(id),
+  amount numeric(14,2) NOT NULL CHECK (amount > 0),
+  UNIQUE(payment_id, invoice_id)
+);
+
+CREATE TABLE accounting_sync_queue (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_kind text NOT NULL,
+  source_id uuid NOT NULL,
+  target_system text NOT NULL DEFAULT 'tallyprime',
+  sync_status sync_status NOT NULL DEFAULT 'pending',
+  idempotency_key text NOT NULL UNIQUE,
+  attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  tally_voucher_id text,
+  last_error text,
+  requested_at timestamptz NOT NULL DEFAULT now(),
+  completed_at timestamptz,
+  UNIQUE(source_kind, source_id, target_system)
+);
+CREATE INDEX accounting_sync_queue_pending_idx ON accounting_sync_queue(sync_status, requested_at);
+
+CREATE TABLE audit_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id uuid,
+  action text NOT NULL,
+  entity_type text NOT NULL,
+  entity_id uuid,
+  before_data jsonb,
+  after_data jsonb,
+  reason text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX audit_events_entity_idx ON audit_events(entity_type, entity_id, created_at DESC);
+),
+  CHECK (imei_1 IS NULL OR imei_2 IS NULL OR imei_1 <> imei_2)
 );
 CREATE INDEX devices_product_status_idx ON devices(product_id, device_status);
 CREATE INDEX devices_supplier_idx ON devices(supplier_id);
+
+-- An IMEI must be unique regardless of whether a phone records it as IMEI 1 or IMEI 2.
+CREATE OR REPLACE FUNCTION enforce_device_imei_cross_column_uniqueness()
+RETURNS trigger AS $
+BEGIN
+  IF NEW.imei_1 IS NOT NULL AND EXISTS (
+    SELECT 1 FROM devices d
+    WHERE d.id IS DISTINCT FROM NEW.id
+      AND (d.imei_1 = NEW.imei_1 OR d.imei_2 = NEW.imei_1)
+  ) THEN
+    RAISE EXCEPTION 'IMEI % is already assigned to another device', NEW.imei_1
+      USING ERRCODE = 'unique_violation';
+  END IF;
+  IF NEW.imei_2 IS NOT NULL AND EXISTS (
+    SELECT 1 FROM devices d
+    WHERE d.id IS DISTINCT FROM NEW.id
+      AND (d.imei_1 = NEW.imei_2 OR d.imei_2 = NEW.imei_2)
+  ) THEN
+    RAISE EXCEPTION 'IMEI % is already assigned to another device', NEW.imei_2
+      USING ERRCODE = 'unique_violation';
+  END IF;
+  RETURN NEW;
+END;
+$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS devices_imei_cross_column_unique ON devices;
+CREATE TRIGGER devices_imei_cross_column_unique
+BEFORE INSERT OR UPDATE OF imei_1, imei_2 ON devices
+FOR EACH ROW EXECUTE FUNCTION enforce_device_imei_cross_column_uniqueness();
 
 CREATE TABLE sales_invoices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
