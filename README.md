@@ -23,7 +23,13 @@ https://sri-sai-nath-7eev6juep-krishna3251s-projects.vercel.app
 ## What works in this prototype
 - Responsive navigation and screen layouts
 - Browser-local demo product and party records
-- Demo cart, barcode/SKU/IMEI lookup, price editing, sample purchase stock adjustments, invoice preview and CSV exports
+- **Unit-level phone tracking:** each physical phone has its own record, IMEI 1, optional IMEI 2, internal device label, purchase cost and status
+- Add-product and purchase-in flows require one IMEI 1 per phone in stock; IMEI 2 is optional and can be entered in the same order
+- IMEI 1 and IMEI 2 can both be scanned to find the same physical phone; scanning a model SKU opens a picker so the cashier must select the exact handset
+- Sales attach the selected device IDs / IMEIs to the demo invoice and mark those units sold; supplier returns can identify the exact unit
+- Device registry search, status filters and CSV export for IMEI 1 / IMEI 2 / serial / internal label
+- Duplicate IMEIs are rejected in the browser demo; PostgreSQL schema includes format checks plus cross-column uniqueness enforcement
+- Browser-local price editing, stock adjustments, invoice preview and CSV exports
 - PostgreSQL schema starter in `db/schema.sql`
 
 ## Setup locally
@@ -40,7 +46,8 @@ Set `DATABASE_URL` to the Neon connection string only after provisioning Neon. D
 ## Important limitations
 This is a prototype, not production-ready accounting software:
 - Demo data is saved to the current browser's localStorage. It does not sync across computers and is not a durable source of truth.
-- The PostgreSQL schema is an initial design only. Database-backed API routes, migrations and transactional persistence are not wired.
+- The PostgreSQL schema is an initial design only. The UI's device records are still stored in this browser's localStorage; database-backed API routes, migrations and transactional persistence are not wired.
+- The sample catalog includes generated demo identifiers. They are illustrative only and must never be treated as real handset inventory.
 - Authentication and server-side authorization/role enforcement are not implemented.
 - Tally sync is a design/status screen; no connector or vouchers are sent to TallyPrime.
 - Barcode label generation and physical printer testing are not implemented.
