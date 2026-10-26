@@ -308,6 +308,11 @@ function demoImei(n) {
       .getByRole("button", { name: "Branding gallery", exact: true })
       .click();
     assert.equal(await page.locator(".branding-card").count(), 4);
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll(".branding-card>a>img")].every(
+        (image) => image.complete && image.naturalWidth > 0,
+      ),
+    );
     for (const image of await page.locator(".branding-card>a>img").all()) {
       assert.equal(
         await image.evaluate((i) => i.complete && i.naturalWidth > 0),
@@ -379,6 +384,79 @@ function demoImei(n) {
       0,
     );
     console.log("PASS empty shop and hydration preserve saved empty records");
+    const storageFailure = await browser.newPage();
+    storageFailure.on("pageerror", (e) => errors.push(e.message));
+    await storageFailure.addInitScript(() => {
+      const original = Storage.prototype.setItem;
+      window.__guideStorageBlocked = true;
+      Storage.prototype.setItem = function (key, value) {
+        if (key === "ssm-guide-v1" && window.__guideStorageBlocked)
+          throw new DOMException("Demo storage blocked", "QuotaExceededError");
+        return original.call(this, key, value);
+      };
+    });
+    await storageFailure.goto(base);
+    await storageFailure
+      .getByRole("button", { name: "Explore Demo", exact: true })
+      .click();
+    await storageFailure
+      .getByRole("status")
+      .filter({ hasText: "Setup progress couldn’t be saved" })
+      .waitFor();
+    await storageFailure
+      .getByRole("button", { name: "Help & setup", exact: true })
+      .click();
+    await storageFailure.getByLabel("I’ve completed this step").check();
+    await storageFailure
+      .getByRole("button", { name: "Next step", exact: true })
+      .click();
+    assert.equal(
+      await storageFailure.locator(".guide-body h2").innerText(),
+      "Add suppliers & customers",
+    );
+    await storageFailure.evaluate(() => {
+      window.__guideStorageBlocked = false;
+    });
+    await storageFailure
+      .getByRole("button", { name: "Next step", exact: true })
+      .click();
+    await storageFailure
+      .locator(".guide-storage-warning")
+      .waitFor({ state: "hidden" });
+    assert.deepEqual(
+      await storageFailure.evaluate(() =>
+        JSON.parse(localStorage.getItem("ssm-guide-v1")),
+      ),
+      { step: 2, done: [0] },
+    );
+    console.log(
+      "PASS guide storage failure: visible warning, usable walkthrough, successful recovery saves current progress",
+    );
+    const malformedGuide = await browser.newPage();
+    malformedGuide.on("pageerror", (e) => errors.push(e.message));
+    await malformedGuide.addInitScript(() =>
+      localStorage.setItem(
+        "ssm-guide-v1",
+        JSON.stringify({ step: "invalid", done: [0, 0, -1, 8, "1"] }),
+      ),
+    );
+    await malformedGuide.goto(base);
+    await malformedGuide
+      .getByRole("button", { name: "Help & setup", exact: true })
+      .click();
+    assert.equal(
+      await malformedGuide.locator(".guide-body h2").innerText(),
+      "Set up your shop",
+    );
+    assert.deepEqual(
+      await malformedGuide.evaluate(() =>
+        JSON.parse(localStorage.getItem("ssm-guide-v1")),
+      ),
+      { step: 0, done: [0] },
+    );
+    console.log(
+      "PASS malformed guide progress: invalid steps and checklist entries safely normalized",
+    );
     assert.deepEqual(errors, []);
     console.log("PASS no browser runtime errors");
   } finally {

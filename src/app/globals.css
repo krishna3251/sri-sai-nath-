@@ -5138,3 +5138,7 @@ p {
     overflow: auto;
   }
 }
+
+.guide-storage-warning{position:fixed;right:24px;bottom:80px;z-index:47;width:320px;max-width:calc(100vw - 32px);margin:0;padding:13px 16px;border:1px solid #e7bb8d;border-radius:10px;background:#fff7ed;color:#794a23;box-shadow:var(--shadow);font-size:12px;line-height:1.6}
+@media print{.guide-storage-warning{display:none!important}}
+.guide-panel .guide-storage-warning{position:static;width:auto;max-width:none;margin:0 0 16px;box-shadow:none}

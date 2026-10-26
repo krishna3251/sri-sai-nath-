@@ -128,7 +128,7 @@ CREATE TABLE devices (
   CHECK (imei_1 IS NOT NULL OR imei_2 IS NOT NULL OR serial_number IS NOT NULL OR barcode IS NOT NULL),
   CHECK (imei_1 IS NULL OR imei_1 ~ '^[0-9]{15}$'),
   CHECK (imei_2 IS NULL OR imei_2 ~ '^[0-9]{15}$'),
-  CHECK (imei_1 IS NULL OR imei_2 IS NULL OR imei_1 <> imei_2)
+  CONSTRAINT devices_distinct_imeis CHECK (imei_1 IS NULL OR imei_2 IS NULL OR imei_1 <> imei_2)
 );
 CREATE INDEX devices_product_status_idx ON devices(product_id, device_status);
 CREATE INDEX devices_supplier_idx ON devices(supplier_id);

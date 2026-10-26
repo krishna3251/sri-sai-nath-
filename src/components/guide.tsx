@@ -95,15 +95,36 @@ export function Guide({ go, screen }: Props) {
     [welcome, setWelcome] = useState(false),
     [open, setOpen] = useState(false),
     [step, setStep] = useState(0),
-    [done, setDone] = useState<number[]>([]);
+    [done, setDone] = useState<number[]>([]),
+    [saveError, setSaveError] = useState(false);
   useDialogFocus(welcome, () => setWelcome(false));
   useEffect(() => {
     try {
       const raw = localStorage.getItem("ssm-guide-v1");
       if (raw) {
         const saved = JSON.parse(raw);
-        setStep(Math.min(6, Math.max(0, saved.step || 0)));
-        setDone(Array.isArray(saved.done) ? saved.done : []);
+        setStep(
+          Number.isInteger(saved.step) &&
+            saved.step >= 0 &&
+            saved.step < guideSteps.length
+            ? saved.step
+            : 0,
+        );
+        setDone(
+          Array.isArray(saved.done)
+            ? [
+                ...new Set<number>(
+                  saved.done.filter(
+                    (n: unknown): n is number =>
+                      typeof n === "number" &&
+                      Number.isInteger(n) &&
+                      n >= 0 &&
+                      n < guideSteps.length,
+                  ),
+                ),
+              ]
+            : [],
+        );
       } else setWelcome(true);
     } catch {
       setWelcome(true);
@@ -114,7 +135,10 @@ export function Guide({ go, screen }: Props) {
     if (ready && !welcome)
       try {
         localStorage.setItem("ssm-guide-v1", JSON.stringify({ step, done }));
-      } catch {}
+        setSaveError(false);
+      } catch {
+        setSaveError(true);
+      }
   }, [ready, welcome, step, done]);
   useEffect(() => {
     const restart = () => {
@@ -140,6 +164,12 @@ export function Guide({ go, screen }: Props) {
   }
   return (
     <>
+      {saveError && !open && (
+        <p className="guide-storage-warning" role="status">
+          Setup progress couldn’t be saved. You can keep using the guide, but
+          progress may reset when you reload.
+        </p>
+      )}
       {welcome && (
         <div className="modal-backdrop">
           <section
@@ -228,6 +258,12 @@ export function Guide({ go, screen }: Props) {
             </button>
           </div>
           <div className="guide-body">
+            {saveError && (
+              <p className="guide-storage-warning" role="status">
+                Setup progress couldn’t be saved. You can keep using the guide,
+                but progress may reset when you reload.
+              </p>
+            )}
             <p>{done.length} of 7 steps marked complete</p>
             <progress max={7} value={done.length} />
             <ol className="guide-checklist">

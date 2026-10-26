@@ -98,3 +98,10 @@ The browser test starts the built application on 127.0.0.1:3100 and creates isol
 This remains a **single-browser demo**. There is no authentication, server authorization, API persistence, shared transactional stock ledger, multi-tab concurrency protection, external payment processing, Tally connector, refund posting or statutory invoice certification. Purchase history stores a receipt summary and unit references, not a complete immutable accounting purchase document. Stock movements are derived demo activity, not a database ledger. Existing saved records are preserved and not rewritten to new demo identifiers. Historical records may lack the newer payment / receipt fields.
 
 No schema migration, production deployment or merge into `main` is part of this change. PR #1 was already merged before this redesign began; review the new feature-branch follow-up separately.
+
+
+### Review follow-up
+
+The setup guide now warns if progress cannot be saved and continues working in memory. Later successful saves clear the warning. Invalid stored guide steps and checklist entries are normalized before use. Browser checks simulate blocked guide storage, recovery and malformed saved progress.
+
+IMEI schema tests assert the expected PostgreSQL SQLSTATE and constraint, verify both directions of cross-column duplication, replace a non-null IMEI, reuse the released identifier and confirm a conflicting update rolls back both the device and registry. These checks still run in PGlite, not against a live Neon database.
