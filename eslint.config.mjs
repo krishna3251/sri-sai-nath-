@@ -1,4 +1,5 @@
 import { defineConfig, globalIgnores } from "eslint/config";
+import nextPlugin from "@next/eslint-plugin-next";
 import tsParser from "@typescript-eslint/parser";
 
 export default defineConfig([
@@ -6,11 +7,19 @@ export default defineConfig([
     files: ["**/*.{js,jsx,ts,tsx}"],
     languageOptions: {
       parser: tsParser,
-      parserOptions: { ecmaVersion: "latest", sourceType: "module", ecmaFeatures: { jsx: true } }
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+        ecmaFeatures: { jsx: true },
+      },
     },
+    plugins: { "@next/next": nextPlugin },
     rules: {
-      "no-undef": "off"
-    }
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
+      "@next/next/no-img-element": "off",
+      "no-undef": "off",
+    },
   },
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"])
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
 ]);

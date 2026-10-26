@@ -1,0 +1,3 @@
+sku,name,brand,variant,tracking,quantity,purchase_cost,retail_price,wholesale_price,party_code,imei1,imei2,serial_number,hsn,gst_rate
+DEMO-CABLE-1,Demo USB-C Cable,Demo,1 metre,Quantity,10,50,99,70,DEMO-SUP,,,,8544,18
+DEMO-PHONE-1,Demo Phone,Demo,8 GB / 128 GB Black,IMEI,,18000,20999,19500,DEMO-SUP,,,,8517,18
