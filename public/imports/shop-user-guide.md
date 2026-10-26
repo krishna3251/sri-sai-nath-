@@ -126,7 +126,7 @@ To recover a removed or damaged phone, filter for its status, select it and choo
 
 For quantity-managed accessories use Adjust quantity. Enter the actual physical count, not the amount to add/subtract, and a reason. The count cannot fall below units in the current draft bill. Phones are adjusted by selecting exact devices or receiving actual identifiers, never by inventing a numeric count.
 
-A model can be archived only when it has no available stock. Its history remains. Choose Archived in the availability filter to find and restore it. Restoring a model makes it visible; it does not add stock. Restore an archived model before importing new stock for that SKU.
+A model can be archived only when it has no available stock. Its history remains. Choose Archived in the availability filter to find and restore it. Restoring a model makes it visible; it does not add stock. Restore an archived model before receiving new stock for that SKU, whether through Purchase In or an import. Older purchase drafts also respect this restriction.
 
 ### Useful extras
 

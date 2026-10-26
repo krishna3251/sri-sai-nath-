@@ -772,12 +772,40 @@ function demoImei(n) {
       (await state()).products.find((p) => p.id === cableModel.id).stock,
       0,
     );
+    await nav("Purchase In");
+    await page
+      .getByLabel("Supplier bill no.", { exact: true })
+      .fill("QA-ARCHIVED-DRAFT");
+    await page
+      .getByPlaceholder("Search model, SKU, IMEI or barcode")
+      .fill(cableModel.sku);
+    await page.locator(".purchase-pick button").first().click();
+    await nav("Products & Stock");
+    await stockSearch().fill(cableModel.sku);
     await page.getByRole("button", { name: "Archive", exact: true }).click();
     await saveCorrection("Accessory line discontinued");
     assert.equal(
       (await state()).products.find((p) => p.id === cableModel.id).archived,
       true,
     );
+    await nav("Purchase In");
+    await page
+      .getByRole("button", { name: "Save purchase", exact: true })
+      .click();
+    await page
+      .locator(".toast")
+      .filter({ hasText: "Restore this archived model" })
+      .waitFor();
+    assert.equal(
+      (await state()).products.find((p) => p.id === cableModel.id).stock,
+      0,
+    );
+    assert.equal(await page.locator(".purchase-pick").count(), 0);
+    await page
+      .getByRole("button", { name: "Clear lines", exact: true })
+      .click();
+    await nav("Products & Stock");
+    await stockSearch().fill(cableModel.sku);
     await page
       .getByLabel("Stock availability filter", { exact: true })
       .selectOption("Archived");

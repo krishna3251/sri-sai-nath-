@@ -1337,6 +1337,12 @@ export default function Page() {
         notify("A product line is no longer in the catalogue.");
         return;
       }
+      if (p.archived) {
+        notify(
+          "Restore this archived model in Products & Stock before receiving or returning its stock.",
+        );
+        return;
+      }
       if (p.tracking === "IMEI") {
         const first = splitIdentifiers(l.imei1s || ""),
           second = splitIdentifiers(l.imei2s || "");
@@ -3786,12 +3792,14 @@ function Barcodes({ products, notify }: any) {
 function Purchases(p: any) {
   const ret = p.screen === "Purchase Returns";
   const total = p.lines.reduce((s: number, l: any) => s + l.qty * l.cost, 0);
-  const visible = p.products.filter((x: Product) =>
-    [x.name, x.sku, x.barcode, x.imei || ""]
-      .join(" ")
-      .toLowerCase()
-      .includes(p.q.toLowerCase()),
-  );
+  const visible = p.products
+    .filter((x: Product) => !x.archived)
+    .filter((x: Product) =>
+      [x.name, x.sku, x.barcode, x.imei || ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(p.q.toLowerCase()),
+    );
   return (
     <div className="screen">
       <Heading
