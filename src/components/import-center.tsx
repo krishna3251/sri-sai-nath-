@@ -18,6 +18,7 @@ import {
   parseCsv,
   parseWhatsApp,
   prepareImport,
+  suggestedImportMode,
   toCsv,
   type ImportRow,
   type ImportContext,
@@ -57,7 +58,9 @@ export default function ImportCenter(p: Props) {
   };
   function parse(value: string, csv = false) {
     try {
-      setRows(csv ? parseCsv(value) : parseWhatsApp(value));
+      const parsed = csv ? parseCsv(value) : parseWhatsApp(value);
+      setRows(parsed);
+      setOptions((o) => ({ ...o, mode: suggestedImportMode(parsed) }));
       setPage(0);
       setError("");
       setMessage("");
@@ -71,9 +74,10 @@ export default function ImportCenter(p: Props) {
       toCsv(
         p.products.flatMap((product) => {
           const units = p.devices.filter(
-            (d) => d.productId === product.id && d.status === "In stock",
+            (d) => d.productId === product.id && ["In stock", "Needs identification", "Under inspection"].includes(d.status),
           );
           const base = {
+            device_status: "Available / catalogue",
             sku: product.sku,
             name: product.name,
             brand: product.brand,
@@ -94,6 +98,7 @@ export default function ImportCenter(p: Props) {
             ? [base]
             : units.map((d) => ({
                 ...base,
+                device_status: d.status,
                 quantity: 1,
                 purchase_cost: d.purchaseCost,
                 party_code: d.supplierCode,
@@ -102,7 +107,7 @@ export default function ImportCenter(p: Props) {
                 serial_number: d.serialNumber,
               }));
         }),
-        columns,
+        [...columns, "device_status"],
       ),
     );
   }
@@ -114,7 +119,7 @@ export default function ImportCenter(p: Props) {
           <h1>Imports & exports</h1>
           <p>
             Paste your WhatsApp list, check every row, then add models or
-            receive identified stock.
+            receive stock with identifiers now or later.
           </p>
         </div>
         <a
@@ -189,7 +194,7 @@ export default function ImportCenter(p: Props) {
               </button>
             </div>
             <p className="subtle-note">
-              Brand headings and RAM/storage are recognized. For quantities and
+              Brand headings and RAM/storage are recognized. A model-only list automatically selects catalogue mode. IMEI, serial and party code can be left blank. Prices marked @8500 or ₹8500 are read as purchase cost. For quantities and
               prices use “| qty: 2 | cost: 8500 | retail: 9999 | wholesale:
               9200”. Missing values stay blank.
             </p>
@@ -266,8 +271,7 @@ export default function ImportCenter(p: Props) {
             <span>
               <strong>Receive stock</strong>
               <small>
-                Add physically received quantities. Phones require valid
-                individual IMEIs.
+                Add physically received quantities. IMEI, serial and party code are optional at import. Unidentified units stay off the saleable shelf.
               </small>
             </span>
           </label>
@@ -289,7 +293,7 @@ export default function ImportCenter(p: Props) {
         </div>
         <div className="form-grid">
           <label className="field">
-            Default supplier / party code
+            Default supplier / party code (optional)
             <input
               list="supplier-codes"
               value={options.partyCode}
@@ -310,7 +314,7 @@ export default function ImportCenter(p: Props) {
                   </option>
                 ))}
             </datalist>
-            <small>Used for rows without their own party_code.</small>
+            <small>Leave blank if unknown. You can assign it later in Stock Manager. If supplied, the code must belong to a supplier.</small>
           </label>
           <label className="field">
             Supplier name (only for a new code)
@@ -363,6 +367,14 @@ export default function ImportCenter(p: Props) {
         </div>
       )}
       {rows.length > 0 && (
+        <div className="import-success" role="status">
+          <CheckCircle2 size={20} />
+          {suggestedImportMode(rows) === "catalogue"
+            ? "Model-only list detected. No quantities or device identities are invented. You can add stock later."
+            : `${result.pending} units need identification. They will be visible in Stock Manager but unavailable for billing until identified and inspected.`}
+        </div>
+      )}
+      {rows.length > 0 && (
         <section className="panel import-review" data-tour="import-review">
           <div className="panel-head">
             <div>
@@ -371,7 +383,7 @@ export default function ImportCenter(p: Props) {
                 {rows.length} rows ·{" "}
                 {options.mode === "catalogue"
                   ? "no stock will be added"
-                  : result.received + " units ready to receive"}
+                  : result.received + " received · " + result.pending + " need identification"}
               </h3>
             </div>
             <button
@@ -426,7 +438,7 @@ export default function ImportCenter(p: Props) {
                             purchase_cost: "Purchase cost ₹",
                             retail_price: "Retail price ₹",
                             wholesale_price: "Wholesale price ₹",
-                            party_code: "Party code",
+                            party_code: "Party code (optional)",
                           }[key]
                         }
                         <input
@@ -470,7 +482,7 @@ export default function ImportCenter(p: Props) {
                       (["imei1", "imei2"] as const).map((key) => (
                         <label className="field import-identifiers" key={key}>
                           {key === "imei1"
-                            ? "IMEI 1 · one per phone"
+                            ? "IMEI 1 · optional at import"
                             : "IMEI 2 · optional, matching order"}
                           <textarea
                             rows={2}
@@ -483,7 +495,7 @@ export default function ImportCenter(p: Props) {
                       ))
                     ) : r.tracking.toLowerCase() === "serial" ? (
                       <label className="field import-identifiers">
-                        Serial numbers
+                        Serial numbers · optional at import
                         <textarea
                           aria-label={"Row " + (i + 1) + " serial_number"}
                           value={r.serial_number}
@@ -538,7 +550,7 @@ export default function ImportCenter(p: Props) {
           <div className="import-confirm">
             <p>
               {options.mode === "receive"
-                ? "Confirm the delivered quantities, costs and exact identifiers before adding stock."
+                ? "Confirm delivered quantities and purchase costs. Missing selling prices start at ₹0: set them before billing. Units without identifiers are saved as Needs identification and cannot be sold. Add real identifiers in Products & Stock → Phones & serials, then pass inspection in IMEI & Serial Tracking."
                 : "Catalogue import adds product records only. Missing prices are zero until you set them; stock stays unchanged."}
               <br />
               <strong>

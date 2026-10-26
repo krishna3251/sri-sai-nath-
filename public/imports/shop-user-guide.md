@@ -131,3 +131,9 @@ A model can be archived only when it has no available stock. Its history remains
 ### Useful extras
 
 Export selected models or phones as CSV. Both IMEIs remain in selected-device exports. Download a Count sheet to record physical counts. Use supplier/category/status filters and sorting to work through low-stock items. Change history can be exported; the complete JSON backup now includes these corrections too. These are local correction records for this browser, not an immutable shared database audit trail or a record of an individually authenticated staff member.
+
+## Lists without IMEIs or party codes
+
+Upload your CSV or paste WhatsApp text in Imports & exports. If every quantity is blank, the ERP selects Models & prices only. It adds your catalogue without inventing stock or prices.
+
+For physically received goods, enter quantity, purchase cost and a unique bill/delivery reference. Party code, IMEIs and serial numbers are optional at import. Missing identifiers appear as **Needs identification** in Products & Stock → Phones & serials. Choose **Add identifiers**, enter the real identifiers and save with a reason. Then check the phone and choose **Inspection passed** in IMEI & Serial Tracking. It becomes available for billing only after that check. Assign supplier codes later with **Change party code**. Never receive the same list a second time just to add identifiers.

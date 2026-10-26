@@ -1586,6 +1586,11 @@ export default function Page() {
       (d) => d.id === id && d.status === "Under inspection",
     );
     if (!unit) return;
+    const model = products.find((p) => p.id === unit.productId);
+    if (saleable && ((model?.tracking === "IMEI" && !isValidImei(unit.imei1)) || (model?.tracking === "Serial" && !unit.serialNumber.trim()))) {
+      notify("Add a valid IMEI or serial number in Stock Manager before releasing this unit.");
+      return;
+    }
     if (saleable && products.find((p) => p.id === unit.productId)?.archived) {
       notify(
         "Restore this product model in Stock Manager before releasing the unit for sale.",
@@ -1800,7 +1805,7 @@ export default function Page() {
     if (
       !window.confirm(
         options.mode === "receive"
-          ? `Receive ${result.received} units against ${options.reference}? Check the actual delivery before confirming.`
+          ? `Receive ${result.received} units against ${options.reference}? ${result.pending} need identification and cannot be sold yet. Check the actual delivery before confirming.`
           : `Save ${result.created} new product models? Catalogue mode does not add stock.`,
       )
     )
@@ -1812,7 +1817,7 @@ export default function Page() {
               id: crypto.randomUUID(),
               number: options.reference.trim(),
               date: today(),
-              supplier: options.partyCode.trim() || "Multiple / row suppliers",
+              supplier: options.partyCode.trim() || "Row suppliers / unassigned",
               kind: "Purchase",
               total: result.totalCost,
               qty: result.received,
@@ -1845,7 +1850,7 @@ export default function Page() {
     setParties(result.parties);
     setPurchases(nextPurchases);
     return {
-      message: `Saved in this browser: ${result.created} new models, ${result.updated} matching rows updated, ${result.received} units received. Export a backup now.`,
+      message: `Saved in this browser: ${result.created} new models, ${result.updated} matching rows updated, ${result.received} units received. ${result.pending} need identification before sale. Export a backup now.`,
     };
   }
   function backupShop() {
@@ -3548,7 +3553,7 @@ function Identifiers({
         <section className="panel inspection-panel">
           <div className="panel-head">
             <div>
-              <span className="eyebrow">CUSTOMER RETURNS · NOT FOR SALE</span>
+              <span className="eyebrow">IDENTIFIED IMPORTS & RETURNS · NOT FOR SALE</span>
               <h3>Awaiting inspection</h3>
             </div>
           </div>
@@ -3613,6 +3618,7 @@ function Identifiers({
               "Returned to supplier",
               "Damaged",
               "Under inspection",
+              "Needs identification",
             ].map((t) => (
               <button
                 key={t}

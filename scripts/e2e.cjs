@@ -486,8 +486,9 @@ function demoImei(n) {
       await page
         .getByRole("button", { name: "Confirm & receive stock", exact: true })
         .isDisabled(),
-      true,
+      false,
     );
+    await page.getByRole("status").filter({ hasText: "1 units need identification" }).waitFor();
     await page
       .getByLabel("Row 1 imei1", { exact: true })
       .fill(demoImei(900040));
@@ -540,6 +541,47 @@ function demoImei(n) {
       (await state()).products.find((p) => p.sku === "QA-FILE").stock,
       2,
     );
+    // Optional identities and supplier: receive, finish identification, then inspect.
+    await page.getByLabel(/^Default supplier \/ party code/).fill("");
+    await page.getByLabel(/^Supplier name/).fill("");
+    await page.getByLabel(/^Supplier bill \/ delivery reference/).fill("IMPORT-PENDING-001");
+    await page.getByLabel("Stock import file", { exact: true }).setInputFiles({
+      name: "without-identifiers.csv", mimeType: "text/csv",
+      buffer: Buffer.from("sku,name,tracking,quantity,purchase_cost\nQA-PENDING,QA Pending Phone,IMEI,2,100")
+    });
+    await page.getByRole("button", { name: "Confirm & receive stock", exact: true }).click();
+    await page.getByRole("status").filter({hasText: "2 units received"}).waitFor();
+    let pendingState = await state();
+    const pendingProduct = pendingState.products.find(p => p.sku === "QA-PENDING");
+    assert.equal(pendingProduct.stock, 0);
+    assert.equal(pendingState.devices.filter(d => d.productId === pendingProduct.id && d.status === "Needs identification").length, 2);
+    await nav("Products & Stock");
+    await page.getByRole("button", {name:"View unidentified stock",exact:true}).click();
+    await page.getByRole("button", {name:"Add identifiers",exact:true}).first().click();
+    await page.getByLabel("Edit handset imei1",{exact:true}).fill(demoImei(970000));
+    await page.getByLabel("Edit handset imei2",{exact:true}).fill(demoImei(970001));
+    await page.getByLabel("Stock change reason",{exact:true}).fill("Checked identifiers on received box");
+    await page.getByRole("button",{name:"Confirm stock change",exact:true}).click();
+    await page.getByRole("dialog").waitFor({state:"hidden"});
+    pendingState = await state();
+    assert.equal(pendingState.devices.find(d=>d.imei1===demoImei(970000)).status,"Under inspection");
+    assert.equal(pendingState.products.find(p=>p.id===pendingProduct.id).stock,0);
+    await nav("IMEI & Serial Tracking");
+    await page.locator(".return-line").filter({hasText:"QA Pending Phone"}).getByRole("button",{name:"Inspection passed",exact:true}).click();
+    await page.waitForFunction((id)=>JSON.parse(localStorage.getItem("ssm-erp-demo-v1")).products.find(p=>p.id===id).stock===1,pendingProduct.id);
+    assert.equal((await state()).devices.find(d=>d.imei1===demoImei(970000)).imei2,demoImei(970001));
+    await nav("Imports & exports");
+    await page.getByRole("button", {name:"Import file",exact:true}).click();
+    await page.getByLabel("Stock import file",{exact:true}).setInputFiles({
+      name:"catalogue-no-stock.csv",mimeType:"text/csv",
+      buffer:Buffer.from("sku,name,tracking\nQA-MODEL-ONLY,QA Model Only,IMEI")
+    });
+    await page.getByRole("button", {name:"Confirm catalogue import",exact:true}).waitFor();
+    assert.equal(await page.getByRole("radio").nth(1).isChecked(),true);
+    await page.getByRole("button",{name:"Confirm catalogue import",exact:true}).click();
+    await page.getByRole("status").filter({hasText:"0 units received"}).waitFor();
+    assert.equal((await state()).products.find(p=>p.sku==="QA-MODEL-ONLY").stock,0);
+    console.log("PASS optional-ID CSV intake, optional party, pending stock, identifier completion, dual IMEI retention, inspection release and automatic catalogue mode");
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
       path: "test-results/imports-desktop.png",

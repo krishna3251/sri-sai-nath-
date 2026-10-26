@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import {
   Archive,
+  AlertTriangle,
   ArrowRight,
   CheckSquare,
   Download,
@@ -40,6 +41,7 @@ const statuses = [
   "In stock",
   "Sold",
   "Under inspection",
+  "Needs identification",
   "Damaged",
   "Removed",
   "Returned to supplier",
@@ -243,6 +245,13 @@ export default function StockManager(p: Props) {
           </button>
         ))}
       </div>
+      {p.devices.some((d) => d.status === "Needs identification") && (
+        <div className="import-success stock-identification-notice" role="status">
+          <AlertTriangle size={20} />
+          <span>{p.devices.filter((d) => d.status === "Needs identification").length} received units need IMEI / serial details before sale.</span>
+          <button className="btn btn-secondary" onClick={() => { setTab("devices"); setDeviceStatus("Needs identification"); p.setSearch(""); p.setCategory("All"); setSupplier("All"); clear(); }}>View unidentified stock</button>
+        </div>
+      )}
       {message && (
         <p className="stock-success" role="status">
           {message}
@@ -648,6 +657,7 @@ export default function StockManager(p: Props) {
                           </td>
                           <td data-label="Available">
                             <strong>{x.stock}</strong>
+                            {p.devices.some((d) => d.productId === x.id && d.status === "Needs identification") && <small className="stock-status">{p.devices.filter((d) => d.productId === x.id && d.status === "Needs identification").length} need identification</small>}
                             <small>
                               {x.tracking === "Quantity"
                                 ? "quantity managed"
@@ -755,12 +765,12 @@ export default function StockManager(p: Props) {
                               </span>
                             </td>
                             <td data-label="Actions">
-                              {d.status === "In stock" ? (
+                              {d.status === "In stock" || d.status === "Needs identification" ? (
                                 <button
                                   className="btn btn-secondary"
                                   onClick={() => open("edit", [d.id])}
                                 >
-                                  Edit handset
+                                  {d.status === "Needs identification" ? "Add identifiers" : "Edit handset"}
                                 </button>
                               ) : (
                                 <button
@@ -790,7 +800,7 @@ export default function StockManager(p: Props) {
             <div className="table-footer">
               {tab === "models"
                 ? "A model is shared by identical variants. Phone quantities come from their individual units."
-                : "One row is one physical unit. Removed records and their identifiers are retained."}
+                : "Needs identification: add real IMEIs / serials, then pass inspection in IMEI & Serial Tracking. These units cannot be sold yet."}
             </div>
           </div>
           <div className="notice-box">
@@ -1110,7 +1120,7 @@ function StockChangeDialog({
                   <p>
                     {device.invoiceNumber
                       ? "This unit has invoice history. Its IMEI / serial identity is locked; supplier and current cost corrections are recorded separately."
-                      : "Correct an input mistake only after checking the actual box. Identifiers must remain unique across all records."}
+                      : device.status === "Needs identification" ? "Add the real identifiers from the phone or box. Saving moves this unit to Under inspection. Then check it and choose Inspection passed in IMEI & Serial Tracking to make it available for sale." : "Correct an input mistake only after checking the actual box. Identifiers must remain unique across all records."}
                   </p>
                 </div>
                 {(deviceModel?.tracking === "IMEI"

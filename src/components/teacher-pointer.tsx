@@ -31,7 +31,7 @@ export const teacherLessons = [
   },
   {
     selector: '[data-tour="import-source"]',
-    say: "Paste your WhatsApp list here, then click Read stock list. Review every row below. No quantity or IMEI is guessed for you.",
+    say: "Paste your WhatsApp list here, then click Read stock list. Review every row below. Party code, IMEI and serial are optional. Model-only lists create a catalogue; received phones without identifiers wait in Stock Manager until you identify and inspect them.",
   },
   {
     selector: '[data-tour="export-panel"]',

@@ -249,3 +249,13 @@ assert.throws(
 console.log(
   "PASS model/device edits, supplier scope, batch atomicity, removal history, inspection holds, archive/restore, quantity guards, IMEI uniqueness and bill locks.",
 );
+
+const unverified = { ...device("pending", 1000), imei1: "", imei2: "", status: "Needs identification" as const };
+const identified = applyStockCommand({ ...ctx, devices: [unverified], products: [{ ...phone, stock: 0 }] }, {
+ scope: "device", action: "edit", ids: [unverified.id], reason: "Add identifiers after import",
+ device: { imei1: makeDemoImei(950000), imei2: makeDemoImei(950001) }
+});
+assert.equal(identified.devices[0].status, "Under inspection");
+assert.equal(identified.products[0].stock, 0);
+assert.equal(identified.devices[0].imei2, makeDemoImei(950001));
+console.log("PASS imported unidentified handset gains identifiers without becoming automatically saleable.");

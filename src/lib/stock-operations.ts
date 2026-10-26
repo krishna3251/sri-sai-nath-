@@ -194,7 +194,7 @@ export function applyStockCommand(ctx: StockContext, command: StockCommand) {
       } else if (command.action === "archive") {
         if (
           model.stock !== 0 ||
-          devices.some((d) => d.productId === id && d.status === "In stock")
+          devices.some((d) => d.productId === id && ["In stock", "Needs identification"].includes(d.status))
         )
           fail(
             "Remove or reconcile available stock before archiving this model.",
@@ -249,7 +249,7 @@ export function applyStockCommand(ctx: StockContext, command: StockCommand) {
           );
         d.status = "Under inspection";
       } else {
-        if (d.status !== "In stock")
+        if (d.status !== "In stock" && d.status !== "Needs identification")
           fail(
             "Only available handsets can be edited, removed or marked damaged. Sold / returned records remain read-only.",
           );
@@ -311,6 +311,7 @@ export function applyStockCommand(ctx: StockContext, command: StockCommand) {
             )
           )
             fail("A device identifier conflicts with a model SKU or barcode.");
+          if (d.status === "Needs identification") d.status = "Under inspection";
           Object.assign(d, {
             imei1: first,
             imei2: second,

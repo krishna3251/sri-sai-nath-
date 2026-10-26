@@ -49,6 +49,7 @@ export type DeviceUnit = {
     | "Returned to supplier"
     | "Damaged"
     | "Under inspection"
+    | "Needs identification"
     | "Removed";
   receivedAt: string;
   receivingReference?: string;

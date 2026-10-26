@@ -4,6 +4,7 @@ import {
   parseCsv,
   prepareImport,
   toCsv,
+  suggestedImportMode,
 } from "../src/lib/stock-import";
 import { makeDemoImei } from "../src/lib/identifiers";
 const empty = { products: [], devices: [], parties: [] };
@@ -22,7 +23,10 @@ assert.equal(rows[0].quantity, "2");
 assert.equal(rows[0].purchase_cost, "8500");
 assert.equal(parseWhatsApp("Samsung\nA07 4/64")[0].quantity, "");
 let result = prepareImport(rows, empty, opts);
-assert.ok(result.errors.some((x) => x.includes("exactly 2")));
+assert.deepEqual(result.errors, []);
+assert.equal(result.pending, 2);
+assert.equal(result.products[0].stock, 0);
+assert.ok(result.devices.every((d) => d.status === "Needs identification" && !d.imei1));
 assert.deepEqual(empty, { products: [], devices: [], parties: [] });
 rows[0].imei1 = [makeDemoImei(900000), makeDemoImei(900001)].join(";");
 rows[0].imei2 = [makeDemoImei(900002), makeDemoImei(900003)].join(";");
@@ -56,3 +60,27 @@ assert.match(toCsv([{ name: "=1+1" }]), /'=1\+1/);
 console.log(
   "PASS WhatsApp/CSV parsing, missing quantity/IMEI safeguards, catalogue-only mode, atomic preview, dual IMEIs, duplicates, accessories and safe CSV exports.",
 );
+
+const optional = { ...opts, partyCode: "", supplierName: "" };
+const pendingRows = parseWhatsApp("Samsung\nPending phone 8/128 | qty: 2 | cost: 100");
+const pending = prepareImport(pendingRows, empty, optional);
+assert.deepEqual(pending.errors, []);
+assert.equal(pending.pending, 2);
+assert.equal(pending.parties.length, 0);
+assert.equal(pending.devices[0].supplierCode, "");
+assert.equal(pending.products[0].stock, 0);
+assert.equal(suggestedImportMode(parseCsv("sku,name,tracking\nPHONE,Phone,IMEI")), "catalogue");
+assert.equal(suggestedImportMode(pendingRows), "receive");
+pendingRows[0].imei1 = makeDemoImei(910000);
+const partial = prepareImport(pendingRows, empty, optional);
+assert.deepEqual(partial.errors, []);
+assert.equal(partial.pending, 1);
+assert.equal(partial.products[0].stock, 1);
+pendingRows[0].imei1 = "123";
+assert.ok(prepareImport(pendingRows, empty, optional).errors.some((e) => e.includes("checksum")));
+const serialRows = parseWhatsApp("Serial device | tracking: Serial | qty: 2 | cost: 10");
+assert.equal(prepareImport(serialRows, empty, optional).pending, 2);
+serialRows[0].serial_number = "SER-1;ser-1";
+assert.ok(prepareImport(serialRows, empty, optional).errors.some((e) => e.includes("Duplicate")));
+assert.equal(parseWhatsApp("Samsung\nA07 4/64 @8,500")[0].purchase_cost, "8500");
+console.log("PASS optional supplier/IMEI/serial, pending counts, partial identification, catalogue detection, malformed and duplicate identifiers.");

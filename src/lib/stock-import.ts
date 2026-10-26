@@ -87,6 +87,11 @@ export function parseWhatsApp(text: string): ImportRow[] {
       if (columns.includes(key as keyof ImportRow))
         r[key as keyof ImportRow] = m[2].trim();
     }
+    const taggedCost = r.name.match(/\s+(?:@|₹|rs\.?\s*)\s*([\d,]+(?:\.\d{1,2})?)\s*$/i);
+    if (taggedCost) {
+      if (!r.purchase_cost) r.purchase_cost = taggedCost[1].replace(/,/g, "");
+      r.name = r.name.slice(0, taggedCost.index).trim();
+    }
     const variant = r.name.match(/\b\d+\s*\/\s*\d+\s*(?:gb|tb)?\b/i);
     if (!r.variant && variant) {
       r.variant = variant[0];
@@ -120,6 +125,10 @@ export function parseWhatsApp(text: string): ImportRow[] {
     throw Error("Import no more than 1,000 rows at once.");
   return rows;
 }
+/** Blank quantity means a catalogue, never an inferred handset. */
+export function suggestedImportMode(rows: ImportRow[]): ImportMode {
+  return rows.some((r) => r.quantity.trim() !== "") ? "receive" : "catalogue";
+}
 export const amount = (v: string) =>
   v.trim() === "" ? null : Number(v.replace(/[₹,\s]/g, ""));
 export type ImportContext = {
@@ -144,6 +153,7 @@ export function prepareImport(
     parties = [...ctx.parties];
   const errors: string[] = [];
   let received = 0,
+    pending = 0,
     created = 0,
     updated = 0,
     totalCost = 0;
@@ -244,7 +254,7 @@ export function prepareImport(
     const code = (r.party_code || defaultCode).trim().toUpperCase();
     if (
       options.mode === "receive" &&
-      (!code ||
+      (code &&
         !parties.some(
           (p) => p.code.toUpperCase() === code && p.roles.includes("Supplier"),
         ))
@@ -256,16 +266,20 @@ export function prepareImport(
     }
     if (
       options.mode === "receive" &&
-      (!Number.isInteger(qty) || qty === null || qty <= 0)
+      (!Number.isInteger(qty) || qty === null || qty <= 0 || qty > 1000)
     ) {
-      issue("Quantity is missing or is not a positive whole number.");
+      issue("Quantity must be a whole number from 1 to 1,000 per row.");
       return;
     }
     if (
       options.mode === "receive" &&
-      (cost === null || retail === null || wholesale === null)
+      cost === null
     ) {
-      issue("Fill purchase cost, retail price and wholesale price.");
+      issue("Fill the purchase cost for received stock. Selling prices may be set later.");
+      return;
+    }
+    if (options.mode === "receive" && received + qty! > 10000) {
+      issue("Receive no more than 10,000 units per import.");
       return;
     }
     const first = splitIdentifiers(r.imei1),
@@ -273,9 +287,9 @@ export function prepareImport(
       serial = splitIdentifiers(r.serial_number);
     if (options.mode === "receive" && track !== "Quantity") {
       const primary = track === "IMEI" ? first : serial;
-      if (primary.length !== qty) {
+      if (primary.length > qty! || (second.length && !first.length)) {
         issue(
-          `Enter exactly ${qty} ${track === "IMEI" ? "IMEI 1 values" : "serial numbers"}; separate them with semicolons.`,
+          `Enter no more than ${qty} primary identifiers. IMEI 2 needs matching IMEI 1 values; separate units with semicolons.`,
         );
         return;
       }
@@ -287,9 +301,9 @@ export function prepareImport(
         issue("Each IMEI must have 15 digits and a valid checksum.");
         return;
       }
-      if (track === "IMEI" && second.length && second.length !== qty) {
+      if (track === "IMEI" && second.length && second.length !== first.length) {
         issue(
-          "IMEI 2 must be empty or contain one value per phone, in matching order.",
+          "IMEI 2 must be empty or contain one value per identified phone, in matching order.",
         );
         return;
       }
@@ -333,9 +347,11 @@ export function prepareImport(
     }
     if (options.mode === "receive") {
       const count = qty!;
-      p.stock += count;
+      const identified = track === "Quantity" ? count : (track === "IMEI" ? first.length : serial.length);
+      p.stock += identified;
+      pending += count - identified;
       p.purchaseCost = cost!;
-      p.status = p.stock <= 5 ? "Low stock" : "In stock";
+      p.status = p.stock === 0 ? "Out of stock" : p.stock <= 5 ? "Low stock" : "In stock";
       received += count;
       totalCost += count * cost!;
       if (track !== "Quantity")
@@ -343,13 +359,13 @@ export function prepareImport(
           devices.push({
             id: crypto.randomUUID(),
             productId: p.id,
-            imei1: track === "IMEI" ? first[i] : "",
+            imei1: track === "IMEI" ? first[i] || "" : "",
             imei2: track === "IMEI" ? second[i] || "" : "",
-            serialNumber: track === "Serial" ? serial[i] : "",
+            serialNumber: track === "Serial" ? serial[i] || "" : "",
             barcode: "SSM-" + crypto.randomUUID(),
             supplierCode: code,
             purchaseCost: cost!,
-            status: "In stock",
+            status: i < identified ? "In stock" : "Needs identification",
             receivedAt: new Date().toLocaleDateString("en-CA", {
               timeZone: "Asia/Kolkata",
             }),
@@ -363,6 +379,7 @@ export function prepareImport(
     parties,
     errors,
     received,
+    pending,
     created,
     updated,
     totalCost,

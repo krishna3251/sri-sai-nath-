@@ -6257,3 +6257,7 @@ p {
   color: #647b91;
   margin-top: 4px;
 }
+
+.stock-identification-notice { flex-wrap: wrap; }
+.stock-identification-notice > span { flex: 1 1 220px; }
+.stock-identification-notice > svg { flex-shrink: 0; }
