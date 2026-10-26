@@ -5139,6 +5139,650 @@ p {
   }
 }
 
-.guide-storage-warning{position:fixed;right:24px;bottom:80px;z-index:47;width:320px;max-width:calc(100vw - 32px);margin:0;padding:13px 16px;border:1px solid #e7bb8d;border-radius:10px;background:#fff7ed;color:#794a23;box-shadow:var(--shadow);font-size:12px;line-height:1.6}
-@media print{.guide-storage-warning{display:none!important}}
-.guide-panel .guide-storage-warning{position:static;width:auto;max-width:none;margin:0 0 16px;box-shadow:none}
+.guide-storage-warning {
+  position: fixed;
+  right: 24px;
+  bottom: 80px;
+  z-index: 47;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 13px 16px;
+  border: 1px solid #e7bb8d;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #794a23;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  line-height: 1.6;
+}
+@media print {
+  .guide-storage-warning {
+    display: none !important;
+  }
+}
+.guide-panel .guide-storage-warning {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin: 0 0 16px;
+  box-shadow: none;
+}
+
+/* Single-shop entry, stock imports and a hands-on teacher guide. */
+.chosen-logo {
+  position: relative;
+  overflow: hidden;
+  width: 180px;
+  height: 55px;
+  background: #fff;
+  border-radius: 6px;
+}
+.chosen-logo img {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 100%;
+  height: auto;
+  margin: 0;
+}
+.sidebar-logo {
+  width: 48px;
+  height: 47px;
+  flex-shrink: 0;
+  background: #fff;
+}
+.sidebar-logo img {
+  width: 220px;
+  left: -9px;
+  bottom: -13px;
+}
+.invoice-chosen-logo {
+  width: 180px;
+  height: 48px;
+  margin-bottom: 16px;
+}
+.welcome-logo {
+  margin-bottom: 25px;
+  width: 190px;
+  height: 57px;
+}
+.shop-entry {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  background: #fbf8f3;
+}
+.shop-entry-story {
+  background: #172b3d;
+  padding: clamp(40px, 8vw, 120px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: #fff;
+}
+.shop-entry-story .chosen-logo {
+  width: 230px;
+  height: 68px;
+  margin-bottom: 65px;
+}
+.shop-entry-story .eyebrow {
+  color: #f2af7f;
+}
+.shop-entry-story h1 {
+  font-size: clamp(32px, 3.4vw, 51px);
+  line-height: 1.15;
+  letter-spacing: -1.9px;
+  margin: 20px 0;
+}
+.shop-entry-story > p {
+  color: #c2ced8;
+  font-size: 15px;
+  line-height: 1.8;
+  max-width: 450px;
+}
+.entry-steps {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 30px;
+  color: #b9c7d2;
+  font-size: 11px;
+}
+.shop-entry-form {
+  align-self: center;
+  justify-self: center;
+  padding: 44px;
+  width: 100%;
+  max-width: 460px;
+}
+.entry-lock {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  background: #ffe8d5;
+  color: #a35b2d;
+  border-radius: 15px;
+  margin-bottom: 30px;
+}
+.shop-entry-form h2 {
+  font-size: 32px;
+  margin: 12px 0;
+}
+.shop-entry-form > p {
+  font-size: 14px;
+  line-height: 1.7;
+  margin-bottom: 30px;
+}
+.shop-entry-form .field {
+  font-size: 13px;
+}
+.pin-field {
+  display: flex;
+  border: 1px solid #d1dbe3;
+  background: #fff;
+  border-radius: 9px;
+  align-items: center;
+}
+.pin-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 13px 15px;
+  letter-spacing: 5px;
+  font-size: 20px;
+  outline: none;
+}
+.shop-entry-form > .btn {
+  width: 100%;
+  margin-top: 24px;
+  min-height: 46px;
+  justify-content: space-between;
+}
+.shop-entry-form > small {
+  display: block;
+  margin-top: 25px;
+  color: #66788b;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.entry-error {
+  background: #fff0eb;
+  border: 1px solid #ecc4b4;
+  color: #9c3e26 !important;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 18px 0 0 !important;
+  font-size: 12px !important;
+}
+.lock-shop {
+  padding: 8px 10px;
+  min-height: 34px;
+  font-size: 11px;
+}
+.import-intro {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 0 25px;
+  flex-wrap: wrap;
+}
+.import-intro svg {
+  color: #a5afba;
+}
+.import-source,
+.import-options,
+.import-review,
+.export-panel {
+  margin-bottom: 24px;
+}
+.import-source .panel-head {
+  align-items: flex-start;
+}
+.import-source .panel-head p {
+  font-size: 12px;
+  margin: 7px 0 0;
+  max-width: 520px;
+}
+.import-source .segmented button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.import-source-body {
+  padding: 24px;
+}
+.import-source-body textarea {
+  font-family: "DM Mono", monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  background: #fafbfd;
+}
+.import-source-body > .guide-actions {
+  margin-top: 16px;
+}
+.import-source-body .subtle-note {
+  margin-top: 17px;
+  line-height: 1.7;
+}
+.upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  border: 1px dashed #b8c8d7;
+  background: #f7fafc;
+  border-radius: 10px;
+  padding: 34px;
+  text-align: center;
+  color: #58718a;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+.upload-zone strong {
+  color: #283f54;
+}
+.upload-zone span {
+  font-size: 12px;
+}
+.upload-zone input {
+  max-width: 100%;
+  font-size: 12px;
+}
+.import-mode-options {
+  padding: 22px 24px 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.import-mode-options label {
+  border: 1px solid #e0e6ec;
+  border-radius: 9px;
+  padding: 17px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+.import-mode-options label.chosen {
+  background: #fff6ed;
+  border-color: #e4a87d;
+}
+.import-mode-options input {
+  margin-top: 3px;
+  accent-color: #c87135;
+}
+.import-mode-options strong {
+  display: block;
+  font-size: 13px;
+}
+.import-mode-options small {
+  display: block;
+  font-size: 11px;
+  color: #63798b;
+  margin-top: 8px;
+  line-height: 1.65;
+}
+.import-options .form-grid {
+  padding: 24px;
+}
+.import-options .guide-complete {
+  line-height: 1.7;
+  font-size: 12px;
+  margin: 0;
+}
+.import-row {
+  margin: 20px;
+  border: 1px solid #dfe6ed;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.import-row-title {
+  padding: 12px 17px;
+  background: #f4f7fa;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid #e5eaf0;
+}
+.import-row-title > strong {
+  font-size: 12px;
+}
+.import-row-title > span {
+  color: #6c7f91;
+  font-size: 11px;
+  flex: 1;
+}
+.import-row-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 20px;
+}
+.import-row-fields .field {
+  font-size: 11px;
+}
+.import-row-fields .field input,
+.import-row-fields .field select,
+.import-row-fields .field textarea {
+  min-width: 0;
+  width: 100%;
+  font-size: 12px;
+}
+.import-identifiers {
+  grid-column: span 2;
+}
+.import-row-list {
+  max-height: 850px;
+  overflow: auto;
+}
+.import-validation {
+  background: #fff8f0;
+  border-top: 1px solid #efdbc7;
+  padding: 20px 24px;
+  font-size: 12px;
+  color: #805330;
+}
+.import-validation > strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.import-validation ul {
+  padding-left: 20px;
+  line-height: 1.8;
+  margin-bottom: 0;
+}
+.import-error {
+  padding: 15px 20px;
+  border: 1px solid #ebc1b1;
+  border-radius: 9px;
+  background: #fff0e9;
+  color: #9b3d24;
+  font-size: 13px;
+}
+.import-success {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px 22px;
+  background: #edf7f1;
+  border: 1px solid #c6e3d2;
+  color: #236446;
+  border-radius: 10px;
+  margin-bottom: 22px;
+  font-size: 13px;
+}
+.import-confirm {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 23px;
+  border-top: 1px solid var(--border);
+}
+.import-confirm > p {
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0;
+  max-width: 650px;
+}
+.import-confirm strong {
+  font-weight: 500;
+  color: #92512c;
+}
+.import-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 24px;
+}
+.export-panel > .branding-note {
+  padding: 0 24px 24px;
+  line-height: 1.8;
+  margin: 0;
+}
+.teacher-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  pointer-events: none;
+}
+.teacher-spotlight {
+  position: fixed;
+  border: 3px solid #f29b54;
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 9999px #12263830,
+    0 0 0 7px #f6b67935;
+  transition:
+    top 0.18s,
+    left 0.18s,
+    width 0.18s,
+    height 0.18s;
+}
+.teacher-coach {
+  position: fixed;
+  width: 290px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #edc19d;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px #17263822;
+}
+.teacher-hand {
+  font-size: 30px;
+  line-height: 1.3;
+  display: inline-block;
+  animation: point-hand 1.6s ease-in-out infinite;
+}
+.teacher-coach strong {
+  font-size: 11px;
+  color: #9c552c;
+}
+.teacher-coach p {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 7px 0 0;
+  color: #3e566d;
+}
+.teacher-note {
+  display: flex;
+  gap: 12px;
+  padding: 15px;
+  background: #fff5e8;
+  border: 1px solid #edd3b9;
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+.teacher-note > span {
+  font-size: 25px;
+}
+.teacher-note strong {
+  font-size: 12px;
+  color: #8e502b;
+}
+.guide-body .teacher-note p {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 6px 0 0;
+}
+.guide-panel {
+  width: 360px;
+}
+.guide-checklist button {
+  padding: 5px 8px;
+}
+[data-tour] {
+  scroll-margin-top: 120px;
+}
+.brand-mini-sidebar .brand-lockup {
+  max-width: 100%;
+}
+.branding-label h3 {
+  line-height: 1.5;
+}
+@keyframes point-hand {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-12deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(-12deg);
+  }
+}
+@media (max-width: 1050px) {
+  .import-source .panel-head {
+    flex-direction: column;
+    gap: 17px;
+  }
+  .import-row-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .shop-entry-story {
+    padding: 50px;
+  }
+  .shop-entry-story .chosen-logo {
+    margin-bottom: 35px;
+  }
+}
+@media (max-width: 700px) {
+  .shop-entry {
+    grid-template-columns: 1fr;
+  }
+  .shop-entry-story {
+    padding: 35px 25px;
+  }
+  .shop-entry-story .chosen-logo {
+    width: 180px;
+    height: 53px;
+    margin-bottom: 25px;
+  }
+  .shop-entry-story h1 {
+    font-size: 30px;
+    letter-spacing: -1px;
+  }
+  .shop-entry-story > p {
+    font-size: 13px;
+    margin-bottom: 0;
+  }
+  .entry-steps {
+    margin-top: 20px;
+  }
+  .shop-entry-form {
+    padding: 35px 25px;
+  }
+  .entry-lock {
+    display: none;
+  }
+  .shop-entry-form h2 {
+    font-size: 26px;
+  }
+  .import-mode-options {
+    grid-template-columns: 1fr;
+    padding: 17px 16px 0;
+  }
+  .import-source-body {
+    padding: 17px;
+  }
+  .import-row-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 14px;
+    gap: 12px;
+  }
+  .import-row {
+    margin: 12px;
+  }
+  .import-confirm {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 18px;
+  }
+  .import-confirm > .btn {
+    width: 100%;
+  }
+  .import-intro {
+    gap: 7px;
+  }
+  .import-intro .step-number {
+    font-size: 9px;
+  }
+  .import-intro svg {
+    width: 12px;
+  }
+  .import-identifiers {
+    grid-column: 1/-1;
+  }
+  .teacher-coach {
+    display: none;
+  }
+  .guide-panel {
+    top: auto;
+    bottom: 76px;
+    max-height: 53vh;
+  }
+  .guide-checklist {
+    margin-bottom: 15px;
+  }
+  .guide-body {
+    padding: 16px;
+  }
+  .teacher-spotlight {
+    box-shadow: 0 0 0 9999px #1226381a;
+  }
+  .top-actions > .lock-shop {
+    display: flex;
+    font-size: 0;
+    padding: 6px;
+    min-height: 32px;
+  }
+  .top-actions > .lock-shop svg {
+    width: 16px;
+  }
+  .global-search {
+    width: 35vw;
+  }
+  .export-actions {
+    padding: 18px;
+  }
+  .export-actions > .btn {
+    width: 100%;
+  }
+  .import-source .segmented {
+    max-width: 100%;
+  }
+  .import-source .segmented button {
+    font-size: 10px;
+  }
+  .upload-zone {
+    padding: 24px 14px;
+  }
+}
+@media print {
+  .teacher-overlay,
+  .teacher-note,
+  .shop-entry {
+    display: none !important;
+  }
+  .invoice-chosen-logo {
+    display: block !important;
+  }
+}
+.sidebar-logo img {
+  width: 180px;
+  left: -11px;
+  bottom: -10px;
+}

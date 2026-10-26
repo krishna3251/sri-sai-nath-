@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
+import TeacherPointer, { teacherLessons } from "@/components/teacher-pointer";
 import { ArrowRight, Check, HelpCircle, X } from "lucide-react";
 export function useDialogFocus(active: boolean, close: () => void) {
   const closer = useRef(close);
@@ -85,8 +86,20 @@ export const guideSteps = [
   {
     title: "Review bills & accounts",
     screen: "Reports",
-    text: "Invoices keeps demo sales and purchase references. Reports exports browser-local records. Payments and staff permissions are previews. Neon database storage and TallyPrime are not connected; no external voucher or payment is sent.",
+    text: "Invoices keeps saved sales; Purchase In keeps receiving references. Reports exports browser-local records. Payments and staff permissions are previews. Neon database storage and TallyPrime are not connected; no external voucher or payment is sent.",
     tip: "Use this prototype with demo data only. Local records do not sync across devices and are not a reliable backup.",
+  },
+  {
+    title: "Import your WhatsApp stock list",
+    screen: "Imports & exports",
+    text: "Paste a forwarded stock list or upload the CSV template. Choose Models & prices only for an incomplete catalogue. Choose Receive stock only for delivered goods with quantities, prices, a supplier reference and each phone’s IMEIs. Fix every flagged row before confirming.",
+    tip: "Download the file instructions and give them to another AI with your original list. The AI must leave unknown values blank rather than invent them.",
+  },
+  {
+    title: "Export & back up your shop",
+    screen: "Imports & exports",
+    text: "Download current stock, device records, customers/suppliers or invoice lines as CSV. Full shop backup downloads the complete browser-local record set as JSON, including both IMEIs and settings.",
+    tip: "Save a backup after every major stock update. This shop’s records are currently stored in this browser and do not sync to another computer.",
   },
 ];
 type Props = { go: (screen: string) => void; screen: string };
@@ -144,6 +157,7 @@ export function Guide({ go, screen }: Props) {
     const restart = () => {
       setOpen(true);
       setWelcome(false);
+      go(guideSteps[step].screen);
     };
     const replay = () => {
       setStep(0);
@@ -157,13 +171,18 @@ export function Guide({ go, screen }: Props) {
       window.removeEventListener("ssm-help", restart);
       window.removeEventListener("ssm-restart", replay);
     };
-  }, []);
+  }, [go, step]);
   function visit(n: number) {
     setStep(n);
     go(guideSteps[n].screen);
   }
   return (
     <>
+      <TeacherPointer
+        active={open && screen === guideSteps[step].screen}
+        step={step}
+        screen={screen}
+      />
       {saveError && !open && (
         <p className="guide-storage-warning" role="status">
           Setup progress couldn’t be saved. You can keep using the guide, but
@@ -185,9 +204,9 @@ export function Guide({ go, screen }: Props) {
             >
               <X size={20} />
             </button>
-            <span className="guide-emblem">
-              SS<span>.</span>
-            </span>
+            <div className="chosen-logo welcome-logo">
+              <img src="/branding/logo-option-c.png" alt="Sri Sai Mobile ERP" />
+            </div>
             <span className="eyebrow">YOUR SHOP. SIMPLIFIED.</span>
             <h2 id="welcome-title">
               Welcome to
@@ -231,6 +250,12 @@ export function Guide({ go, screen }: Props) {
       <button
         className="help-fab"
         onClick={() => {
+          if (!open) {
+            const current = guideSteps.findIndex((s) => s.screen === screen);
+            const next = current < 0 ? step : current;
+            setStep(next);
+            go(guideSteps[next].screen);
+          }
           setOpen(!open);
           setWelcome(false);
         }}
@@ -247,7 +272,7 @@ export function Guide({ go, screen }: Props) {
           <div className="panel-head">
             <div>
               <span className="eyebrow">GETTING STARTED</span>
-              <h3>Your shop setup guide</h3>
+              <h3>Let’s learn your shop, together</h3>
             </div>
             <button
               className="icon-btn"
@@ -264,8 +289,17 @@ export function Guide({ go, screen }: Props) {
                 but progress may reset when you reload.
               </p>
             )}
-            <p>{done.length} of 7 steps marked complete</p>
-            <progress max={7} value={done.length} />
+            <div className="teacher-note">
+              <span>☝️</span>
+              <div>
+                <strong>Here’s what to do</strong>
+                <p>{teacherLessons[step]?.say}</p>
+              </div>
+            </div>
+            <p>
+              {done.length} of {guideSteps.length} steps marked complete
+            </p>
+            <progress max={guideSteps.length} value={done.length} />
             <ol className="guide-checklist">
               {guideSteps.map((s, i) => (
                 <li key={s.title}>
@@ -282,7 +316,9 @@ export function Guide({ go, screen }: Props) {
                 </li>
               ))}
             </ol>
-            <span className="eyebrow">STEP {step + 1} OF 7</span>
+            <span className="eyebrow">
+              STEP {step + 1} OF {guideSteps.length}
+            </span>
             <h2>{guideSteps[step].title}</h2>
             <p>{guideSteps[step].text}</p>
             <div className="guide-tip">{guideSteps[step].tip}</div>
@@ -319,9 +355,13 @@ export function Guide({ go, screen }: Props) {
               </button>
               <button
                 className="btn btn-primary"
-                onClick={() => (step < 6 ? visit(step + 1) : setOpen(false))}
+                onClick={() =>
+                  step < guideSteps.length - 1
+                    ? visit(step + 1)
+                    : setOpen(false)
+                }
               >
-                {step < 6 ? "Next step" : "Finish guide"}{" "}
+                {step < guideSteps.length - 1 ? "Next step" : "Finish guide"}{" "}
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -343,6 +383,13 @@ export function GettingStarted({ go }: { go: (s: string) => void }) {
           <h1>A clear start for your shop.</h1>
           <p>Follow the setup guide, or jump to the task you need.</p>
         </div>
+        <a
+          className="btn btn-secondary"
+          href="/imports/shop-user-guide.md"
+          download
+        >
+          Download the plain-language shop guide
+        </a>
         <button
           className="btn btn-primary"
           onClick={() => window.dispatchEvent(new Event("ssm-restart"))}
@@ -404,8 +451,8 @@ export function BrandingGallery() {
     <section>
       <div className="panel-head">
         <div>
-          <span className="eyebrow">BRAND EXPLORATION · NO LOGO SELECTED</span>
-          <h3>Four directions. Your choice.</h3>
+          <span className="eyebrow">BRAND IDENTITY · LOGO C SELECTED</span>
+          <h3>Logo C · your selected identity</h3>
         </div>
         <select
           aria-label="Logo preview background"
@@ -417,9 +464,9 @@ export function BrandingGallery() {
         </select>
       </div>
       <p className="branding-note">
-        Generated concept previews. The application keeps temporary text
-        branding until you choose. Dark-surface previews use a light holding
-        panel to preserve contrast.
+        Logo C is applied to the sidebar, welcome screen and invoice headers.
+        Other concepts remain available for comparison. Dark-surface previews
+        use a light holding panel to preserve contrast.
       </p>
       <div className={"branding-grid " + background}>
         {[
@@ -468,7 +515,11 @@ export function BrandingGallery() {
                 </span>
                 <small>DEMO INVOICE · SSM-00001</small>
               </div>
-              <p>Concept preview only · not applied</p>
+              <p>
+                {id === "c"
+                  ? "Selected · applied to this shop"
+                  : "Alternative concept · not applied"}
+              </p>
             </div>
           </article>
         ))}

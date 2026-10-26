@@ -3,6 +3,9 @@ const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { spawn } = require("node:child_process");
+try {
+  process.loadEnvFile(".env.local");
+} catch {}
 const base = process.env.BASE_URL || "http://127.0.0.1:3100";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function demoImei(n) {
@@ -94,6 +97,25 @@ function demoImei(n) {
     const state = () =>
       page.evaluate(() => JSON.parse(localStorage.getItem("ssm-erp-demo-v1")));
     await page.goto(base);
+    assert.ok(page.url().includes("/sign-in"));
+    fs.mkdirSync("test-results", { recursive: true });
+    await page.screenshot({
+      path: "test-results/shop-sign-in.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+    const rejectedOrigin = await page.request.post(base + "/api/shop-session", {
+      headers: { Origin: "https://other.example" },
+      data: { pin: process.env.SHOP_PIN },
+    });
+    assert.equal(rejectedOrigin.status(), 403);
+    await page.getByLabel("Shop PIN", { exact: true }).fill("incorrect-pin");
+    await page.getByRole("button", { name: "Open shop", exact: true }).click();
+    await page.getByRole("alert").filter({ hasText: "incorrect" }).waitFor();
+    await page
+      .getByLabel("Shop PIN", { exact: true })
+      .fill(process.env.SHOP_PIN);
+    await page.getByRole("button", { name: "Open shop", exact: true }).click();
     await page
       .getByRole("button", { name: "Start Setup", exact: true })
       .click();
@@ -373,6 +395,10 @@ function demoImei(n) {
     });
     await empty.goto(base);
     await empty
+      .getByLabel("Shop PIN", { exact: true })
+      .fill(process.env.SHOP_PIN);
+    await empty.getByRole("button", { name: "Open shop", exact: true }).click();
+    await empty
       .getByRole("heading", { name: "Your first bill starts here" })
       .waitFor();
     assert.equal(
@@ -384,6 +410,165 @@ function demoImei(n) {
       0,
     );
     console.log("PASS empty shop and hydration preserve saved empty records");
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await nav("Imports & exports");
+    await page.getByLabel(/^Default supplier \/ party code/).fill("SUPQA");
+    await page
+      .getByLabel(/^Supplier name \(only for a new code\)/)
+      .fill("QA Imports Supplier");
+    await page
+      .getByLabel(/^Supplier bill \/ delivery reference/)
+      .fill("IMPORT-QA-001");
+    await page
+      .getByLabel("Paste WhatsApp stock list", { exact: true })
+      .fill(
+        "Accessories\nQA Import Cable | qty: 3 | cost: 50 | retail: 99 | wholesale: 70",
+      );
+    await page
+      .getByRole("button", { name: "Read stock list", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Confirm & receive stock", exact: true })
+      .click();
+    await page
+      .getByRole("status")
+      .filter({ hasText: "3 units received" })
+      .waitFor();
+    assert.equal(
+      (await state()).products.find((p) => p.name === "QA Import Cable").stock,
+      3,
+    );
+    await page
+      .getByRole("button", { name: "Read stock list", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Confirm & receive stock", exact: true })
+      .click();
+    await page
+      .getByRole("alert")
+      .filter({ hasText: "already recorded" })
+      .waitFor();
+    assert.equal(
+      (await state()).products.find((p) => p.name === "QA Import Cable").stock,
+      3,
+    );
+    await page.getByRole("radio").nth(1).check();
+    await page
+      .getByLabel("Paste WhatsApp stock list", { exact: true })
+      .fill("Samsung\nQA Import Phone 8/128");
+    await page
+      .getByRole("button", { name: "Read stock list", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Confirm catalogue import", exact: true })
+      .click();
+    await page
+      .getByRole("status")
+      .filter({ hasText: "0 units received" })
+      .waitFor();
+    assert.equal(
+      (await state()).products.find((p) => p.name === "QA Import Phone").stock,
+      0,
+    );
+    await page.getByRole("radio").first().check();
+    await page
+      .getByLabel(/^Supplier bill \/ delivery reference/)
+      .fill("IMPORT-QA-002");
+    await page
+      .getByLabel("Paste WhatsApp stock list", { exact: true })
+      .fill(
+        "Samsung\nQA Import Phone 8/128 | qty: 1 | cost: 100 | retail: 200 | wholesale: 150",
+      );
+    await page
+      .getByRole("button", { name: "Read stock list", exact: true })
+      .click();
+    assert.equal(
+      await page
+        .getByRole("button", { name: "Confirm & receive stock", exact: true })
+        .isDisabled(),
+      true,
+    );
+    await page
+      .getByLabel("Row 1 imei1", { exact: true })
+      .fill(demoImei(900040));
+    await page
+      .getByLabel("Row 1 imei2", { exact: true })
+      .fill(demoImei(900041));
+    await page
+      .getByRole("button", { name: "Confirm & receive stock", exact: true })
+      .click();
+    await page
+      .getByRole("status")
+      .filter({ hasText: "1 units received" })
+      .waitFor();
+    assert.equal(
+      (await state()).devices.find((d) => d.imei1 === demoImei(900040)).imei2,
+      demoImei(900041),
+    );
+    const backupDownload = page.waitForEvent("download");
+    await page
+      .getByRole("button", { name: "Full shop backup (JSON)", exact: true })
+      .click();
+    const backup = JSON.parse(
+      fs.readFileSync(await (await backupDownload).path(), "utf8"),
+    );
+    assert.equal(
+      backup.devices.find((d) => d.imei1 === demoImei(900040)).imei2,
+      demoImei(900041),
+    );
+    await page
+      .getByRole("button", { name: "Import file", exact: true })
+      .click();
+    await page.getByLabel("Stock import file", { exact: true }).setInputFiles({
+      name: "test.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        "sku,name,tracking,quantity,purchase_cost,retail_price,wholesale_price\nQA-FILE,QA File Cable,Quantity,2,20,50,40",
+      ),
+    });
+    await page
+      .getByLabel(/^Supplier bill \/ delivery reference/)
+      .fill("IMPORT-QA-003");
+    await page
+      .getByRole("button", { name: "Confirm & receive stock", exact: true })
+      .click();
+    await page
+      .getByRole("status")
+      .filter({ hasText: "2 units received" })
+      .waitFor();
+    assert.equal(
+      (await state()).products.find((p) => p.sku === "QA-FILE").stock,
+      2,
+    );
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: "test-results/imports-desktop.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      true,
+    );
+    console.log(
+      "PASS imports: WhatsApp preview, supplier creation, exact quantities/IMEIs, duplicate reference rejection, catalogue-only safeguard, CSV upload and JSON backup",
+    );
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await nav("Getting Started");
+    await page
+      .getByRole("button", { name: "Restart guided tour", exact: true })
+      .click();
+    await page.locator('[data-testid="teacher-highlight"]').waitFor();
+    await page.screenshot({
+      path: "test-results/teacher-guide.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+    await page.getByLabel("Close guide", { exact: true }).click();
+    console.log("PASS teacher guide highlights the actual shop-name control");
     const storageFailure = await browser.newPage();
     storageFailure.on("pageerror", (e) => errors.push(e.message));
     await storageFailure.addInitScript(() => {
@@ -396,6 +581,12 @@ function demoImei(n) {
       };
     });
     await storageFailure.goto(base);
+    await storageFailure
+      .getByLabel("Shop PIN", { exact: true })
+      .fill(process.env.SHOP_PIN);
+    await storageFailure
+      .getByRole("button", { name: "Open shop", exact: true })
+      .click();
     await storageFailure
       .getByRole("button", { name: "Explore Demo", exact: true })
       .click();
@@ -437,10 +628,16 @@ function demoImei(n) {
     await malformedGuide.addInitScript(() =>
       localStorage.setItem(
         "ssm-guide-v1",
-        JSON.stringify({ step: "invalid", done: [0, 0, -1, 8, "1"] }),
+        JSON.stringify({ step: "invalid", done: [0, 0, -1, 99, "1"] }),
       ),
     );
     await malformedGuide.goto(base);
+    await malformedGuide
+      .getByLabel("Shop PIN", { exact: true })
+      .fill(process.env.SHOP_PIN);
+    await malformedGuide
+      .getByRole("button", { name: "Open shop", exact: true })
+      .click();
     await malformedGuide
       .getByRole("button", { name: "Help & setup", exact: true })
       .click();
@@ -456,6 +653,26 @@ function demoImei(n) {
     );
     console.log(
       "PASS malformed guide progress: invalid steps and checklist entries safely normalized",
+    );
+    const tampered = await browser.newContext();
+    await tampered.addCookies([
+      {
+        name: "sri-sai-shop-session",
+        value: "forged-unlocked-session",
+        url: base,
+      },
+    ]);
+    const locked = await tampered.newPage();
+    await locked.goto(base);
+    assert.ok(locked.url().includes("/sign-in"));
+    await page.getByRole("button", { name: "Lock shop", exact: true }).click();
+    await page
+      .getByRole("heading", { name: "Welcome back", exact: true })
+      .waitFor();
+    await page.goto(base);
+    assert.ok(page.url().includes("/sign-in"));
+    console.log(
+      "PASS shop gate: incorrect PIN and cross-origin requests rejected, encrypted session works, forged session rejected, lock closes access",
     );
     assert.deepEqual(errors, []);
     console.log("PASS no browser runtime errors");
