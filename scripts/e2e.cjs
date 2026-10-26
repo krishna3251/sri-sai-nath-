@@ -569,6 +569,288 @@ function demoImei(n) {
     });
     await page.getByLabel("Close guide", { exact: true }).click();
     console.log("PASS teacher guide highlights the actual shop-name control");
+    await nav("Products & Stock");
+    const originalInvoices = JSON.stringify((await state()).invoices);
+    const managedModel = (await state()).products.find(
+      (p) => p.sku === "PH-NVX5-128-S",
+    );
+    const managedUnits = (await state()).devices
+      .filter((d) => d.productId === managedModel.id && d.status === "In stock")
+      .slice(0, 2);
+    const stockSearch = () =>
+      page.getByRole("textbox", { name: "Search stock manager", exact: true });
+    const stockDialog = () =>
+      page.getByRole("dialog", {
+        name: /Edit product model|Edit physical handset|Change supplier|Correct unit|Remove selected|Send selected|Count & adjust|Archive product|Restore product/,
+      });
+    const saveCorrection = async (reason) => {
+      await page
+        .getByLabel("Stock change reason", { exact: true })
+        .fill(reason);
+      await page
+        .getByRole("button", { name: "Confirm stock change", exact: true })
+        .click();
+    };
+    await stockSearch().fill(managedModel.sku);
+    await page.getByRole("button", { name: "Edit model", exact: true }).click();
+    await page
+      .getByLabel("Edit model retailPrice", { exact: true })
+      .fill("25000");
+    await page
+      .getByLabel("Edit supplier code", { exact: true })
+      .selectOption("SUPQA");
+    await saveCorrection("Supplier default corrected from invoice");
+    assert.equal(
+      (await state()).products.find((p) => p.id === managedModel.id)
+        .retailPrice,
+      25000,
+    );
+    assert.equal(
+      (await state()).devices.find((d) => d.id === managedUnits[0].id)
+        .supplierCode,
+      managedUnits[0].supplierCode,
+    );
+    await page.getByRole("tab", { name: /Phones & serials/ }).click();
+    await page
+      .getByLabel("Select all visible stock rows", { exact: true })
+      .check();
+    assert.equal(
+      await page.locator('.stock-table input[type="checkbox"]:checked').count(),
+      managedModel.stock,
+    );
+    await page
+      .getByRole("button", { name: "Clear selection", exact: true })
+      .click();
+    for (const d of managedUnits)
+      await page
+        .getByLabel("Select device " + d.imei1, { exact: true })
+        .check();
+    await page
+      .getByRole("button", { name: "Change party code", exact: true })
+      .click();
+    await page
+      .getByLabel("Edit supplier code", { exact: true })
+      .selectOption("SUPQA");
+    await saveCorrection("Correct party code for selected physical phones");
+    assert.equal(
+      (await state()).devices.find((d) => d.id === managedUnits[0].id)
+        .supplierCode,
+      "SUPQA",
+    );
+    assert.equal(
+      (await state()).devices.find((d) => d.id === managedUnits[1].id)
+        .supplierCode,
+      "SUPQA",
+    );
+    const unitRow = page
+      .locator(".stock-table tbody tr")
+      .filter({ hasText: managedUnits[0].imei1 });
+    await unitRow
+      .getByRole("button", { name: "Edit handset", exact: true })
+      .click();
+    await page
+      .getByLabel("Edit handset imei2", { exact: true })
+      .fill(managedUnits[1].imei1);
+    await saveCorrection("Correct secondary IMEI after checking the box");
+    await page
+      .getByRole("alert")
+      .filter({ hasText: "already assigned" })
+      .waitFor();
+    assert.equal(
+      (await state()).devices.find((d) => d.id === managedUnits[0].id).imei2,
+      managedUnits[0].imei2,
+    );
+    await page
+      .getByLabel("Edit handset imei2", { exact: true })
+      .fill(demoImei(900090));
+    await page
+      .getByLabel("Edit handset purchaseCost", { exact: true })
+      .fill("19000");
+    await page
+      .getByRole("button", { name: "Confirm stock change", exact: true })
+      .click();
+    await page.locator(".stock-edit-dialog").waitFor({ state: "hidden" });
+    assert.equal(
+      (await state()).devices.find((d) => d.id === managedUnits[0].id).imei2,
+      demoImei(900090),
+    );
+    for (const d of managedUnits)
+      await page
+        .getByLabel("Select device " + d.imei1, { exact: true })
+        .check();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({
+      path: "test-results/stock-manager-desktop.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+    await page
+      .getByRole("button", { name: "Remove from stock", exact: true })
+      .click();
+    await page.screenshot({
+      path: "test-results/stock-remove-dialog.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+    await saveCorrection("Physical count: selected boxes missing from shelf");
+    let managedState = await state();
+    assert.equal(
+      managedState.products.find((p) => p.id === managedModel.id).stock,
+      managedModel.stock - 2,
+    );
+    assert.ok(
+      managedUnits.every(
+        (d) =>
+          managedState.devices.find((x) => x.id === d.id).status === "Removed",
+      ),
+    );
+    assert.equal(JSON.stringify(managedState.invoices), originalInvoices);
+    await nav("New Sale");
+    await page
+      .getByPlaceholder("Scan barcode, IMEI or type code…")
+      .fill(managedUnits[0].imei1);
+    await page
+      .getByPlaceholder("Scan barcode, IMEI or type code…")
+      .press("Enter");
+    await page
+      .locator(".toast")
+      .filter({ hasText: "marked removed" })
+      .waitFor();
+    await nav("Products & Stock");
+    await page.getByRole("tab", { name: /Phones & serials/ }).click();
+    await page
+      .getByLabel("Device status filter", { exact: true })
+      .selectOption("Removed");
+    await stockSearch().fill(managedModel.sku);
+    await page
+      .getByLabel("Select all visible stock rows", { exact: true })
+      .check();
+    const selectedCsv = page.waitForEvent("download");
+    await page
+      .getByRole("button", { name: "Export selected", exact: true })
+      .click();
+    const selectedCsvText = fs.readFileSync(
+      await (await selectedCsv).path(),
+      "utf8",
+    );
+    assert.ok(
+      selectedCsvText.includes(demoImei(900090)) &&
+        selectedCsvText.includes(managedUnits[1].imei2),
+    );
+    await page
+      .getByRole("button", { name: "Send to inspection", exact: true })
+      .click();
+    await saveCorrection("Boxes found, inspect condition before restocking");
+    assert.equal(
+      (await state()).products.find((p) => p.id === managedModel.id).stock,
+      managedModel.stock - 2,
+    );
+    await nav("IMEI & Serial Tracking");
+    await page
+      .getByRole("button", { name: "Inspection passed", exact: true })
+      .first()
+      .click();
+    await page
+      .getByRole("button", { name: "Inspection passed", exact: true })
+      .first()
+      .click();
+    assert.equal(
+      (await state()).products.find((p) => p.id === managedModel.id).stock,
+      managedModel.stock,
+    );
+    await nav("Products & Stock");
+    const cableModel = (await state()).products.find(
+      (p) => p.name === "QA Import Cable",
+    );
+    await stockSearch().fill(cableModel.sku);
+    await page
+      .getByRole("button", { name: "Adjust quantity", exact: true })
+      .click();
+    await page.getByLabel("Counted stock quantity", { exact: true }).fill("0");
+    await saveCorrection("Counted no cables in storage");
+    assert.equal(
+      (await state()).products.find((p) => p.id === cableModel.id).stock,
+      0,
+    );
+    await page.getByRole("button", { name: "Archive", exact: true }).click();
+    await saveCorrection("Accessory line discontinued");
+    assert.equal(
+      (await state()).products.find((p) => p.id === cableModel.id).archived,
+      true,
+    );
+    await page
+      .getByLabel("Stock availability filter", { exact: true })
+      .selectOption("Archived");
+    await page
+      .getByRole("button", { name: "Restore model", exact: true })
+      .click();
+    await saveCorrection("Accessory model available again");
+    await page
+      .getByLabel("Stock availability filter", { exact: true })
+      .selectOption("Active");
+    await page
+      .getByRole("button", { name: "Adjust quantity", exact: true })
+      .click();
+    await page.getByLabel("Counted stock quantity", { exact: true }).fill("1");
+    const beforeFailedSave = JSON.stringify(await state());
+    await page.evaluate(() => {
+      window.__stockOriginalSet = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k, v) {
+        if (k === "ssm-erp-demo-v1")
+          throw new DOMException(
+            "Simulated full browser storage",
+            "QuotaExceededError",
+          );
+        return window.__stockOriginalSet.call(this, k, v);
+      };
+    });
+    await saveCorrection("One cable found during recount");
+    await page
+      .getByRole("alert")
+      .filter({ hasText: "Simulated full browser storage" })
+      .waitFor();
+    assert.equal(JSON.stringify(await state()), beforeFailedSave);
+    await page.evaluate(() => {
+      Storage.prototype.setItem = window.__stockOriginalSet;
+    });
+    await page
+      .getByRole("button", { name: "Confirm stock change", exact: true })
+      .click();
+    assert.equal(
+      (await state()).products.find((p) => p.id === cableModel.id).stock,
+      1,
+    );
+    assert.equal(JSON.stringify((await state()).invoices), originalInvoices);
+    await page.getByRole("tab", { name: /Change history/ }).click();
+    assert.ok(
+      (await page.locator(".stock-history").innerText()).includes(
+        "One cable found during recount",
+      ),
+    );
+    const historyCount = (await state()).stockAudit.length;
+    await page.reload();
+    await page
+      .getByRole("heading", { name: "Your shop, at a glance." })
+      .waitFor();
+    assert.equal((await state()).stockAudit.length, historyCount);
+    await nav("Products & Stock");
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      true,
+    );
+    await page.screenshot({
+      path: "test-results/stock-manager-mobile.png",
+      fullPage: true,
+      animations: "disabled",
+    });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    console.log(
+      "PASS stock manager: model edit, scoped supplier changes, multi-select, duplicate IMEI guard, exact removal, sold-stock exclusion, CSV, inspection recovery, accessory count, archive/restore, save-failure rollback and persisted history",
+    );
+
     const storageFailure = await browser.newPage();
     storageFailure.on("pageerror", (e) => errors.push(e.message));
     await storageFailure.addInitScript(() => {

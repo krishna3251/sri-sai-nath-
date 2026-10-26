@@ -16,6 +16,7 @@ export type Product = {
   hsn: string;
   gstRate: number;
   status: string;
+  archived?: boolean;
 };
 export type PurchaseRecord = {
   id: string;
@@ -47,7 +48,8 @@ export type DeviceUnit = {
     | "Sold"
     | "Returned to supplier"
     | "Damaged"
-    | "Under inspection";
+    | "Under inspection"
+    | "Removed";
   receivedAt: string;
   receivingReference?: string;
   invoiceNumber?: string;

@@ -1,4 +1,10 @@
 "use client";
+import StockManager from "@/components/stock-manager";
+import {
+  applyStockCommand,
+  type StockCommand,
+  type StockAudit,
+} from "@/lib/stock-operations";
 import ImportCenter from "@/components/import-center";
 import {
   prepareImport,
@@ -574,6 +580,7 @@ function Table({
 export default function Page() {
   const [hydrated, setHydrated] = useState(false),
     [storageError, setStorageError] = useState("");
+  const [stockAudit, setStockAudit] = useState<StockAudit[]>([]);
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]),
     [returns, setReturns] = useState<ReturnRecord[]>([]);
   const [paymentMethod, setPaymentMethod] = useState("Cash");
@@ -682,6 +689,7 @@ export default function Page() {
         if (d.parties) setParties(d.parties);
         if (Array.isArray(d.purchases)) setPurchases(d.purchases);
         if (Array.isArray(d.returns)) setReturns(d.returns);
+        if (Array.isArray(d.stockAudit)) setStockAudit(d.stockAudit);
         if (d.invoices) setInvoices(d.invoices);
         if (d.settings) setSettings((s) => ({ ...s, ...d.settings }));
       }
@@ -705,6 +713,7 @@ export default function Page() {
           settings,
           purchases,
           returns,
+          stockAudit,
         }),
       );
     } catch {
@@ -720,6 +729,7 @@ export default function Page() {
     settings,
     purchases,
     returns,
+    stockAudit,
     hydrated,
     storageError,
   ]);
@@ -812,6 +822,12 @@ export default function Page() {
     setTimeout(() => setNotice(""), 3200);
   }
   function addCart(p: Product, deviceId?: string) {
+    if (p.archived) {
+      notify(
+        "This product model is archived. Restore it in Products & Stock before selling.",
+      );
+      return;
+    }
     if (p.stock <= 0) {
       notify("Out of stock.");
       return;
@@ -926,6 +942,10 @@ export default function Page() {
         l.discount > l.qty * l.unitPrice
       ) {
         notify("Check quantity, price and discount before billing.");
+        return;
+      }
+      if (l.p.archived) {
+        notify("Restore the archived product model before selling it.");
         return;
       }
       if (l.p.stock < l.qty) {
@@ -1560,6 +1580,12 @@ export default function Page() {
       (d) => d.id === id && d.status === "Under inspection",
     );
     if (!unit) return;
+    if (saleable && products.find((p) => p.id === unit.productId)?.archived) {
+      notify(
+        "Restore this product model in Stock Manager before releasing the unit for sale.",
+      );
+      return;
+    }
     if (
       !window.confirm(
         saleable
@@ -1706,6 +1732,46 @@ export default function Page() {
     setSearch("");
     setMobileNav(false);
   };
+  function commitStockChange(command: StockCommand) {
+    if (storageError)
+      return {
+        error:
+          "Browser storage has an error. Export your existing records before making stock changes.",
+      };
+    try {
+      const next = applyStockCommand(
+        { products, devices, parties, cart },
+        command,
+      );
+      const nextAudit = [...next.audit].reverse().concat(stockAudit);
+      localStorage.setItem(
+        "ssm-erp-demo-v1",
+        JSON.stringify({
+          products: next.products,
+          devices: next.devices,
+          parties,
+          invoices,
+          settings,
+          purchases,
+          returns,
+          stockAudit: nextAudit,
+        }),
+      );
+      setProducts(next.products);
+      setDevices(next.devices);
+      setStockAudit(nextAudit);
+      return {
+        message: `Saved ${next.audit.length} stock change(s) in this browser. Issued invoices are unchanged.`,
+      };
+    } catch (e) {
+      return {
+        error:
+          e instanceof Error
+            ? e.message
+            : "The stock change could not be saved. No records were changed.",
+      };
+    }
+  }
   function commitImport(rows: ImportRow[], options: ImportOptions) {
     if (storageError)
       return {
@@ -1759,6 +1825,7 @@ export default function Page() {
           settings,
           purchases: nextPurchases,
           returns,
+          stockAudit,
         }),
       );
     } catch {
@@ -1790,6 +1857,7 @@ export default function Page() {
           settings,
           purchases,
           returns,
+          stockAudit,
         },
         null,
         2,
@@ -1869,16 +1937,18 @@ export default function Page() {
         );
       case "Products & Stock":
         return (
-          <Inventory
-            products={filteredProducts}
+          <StockManager
+            products={products}
             devices={devices}
+            parties={parties}
+            audit={stockAudit}
             search={search}
             setSearch={setSearch}
             category={category}
             setCategory={setCategory}
-            setModal={setModal}
-            setSelectedProduct={setSelectedProduct}
-            csv={() => csv("products")}
+            addProduct={() => setModal("product")}
+            viewProduct={setSelectedProduct}
+            apply={commitStockChange}
           />
         );
       case "Categories":
@@ -1951,6 +2021,7 @@ export default function Page() {
       case "Stock Movements":
         return (
           <Movements
+            stockAudit={stockAudit}
             products={products}
             invoices={invoices}
             purchases={purchases}
@@ -2371,6 +2442,7 @@ function Dashboard({
   openInvoice,
   addProduct,
 }: any) {
+  products = products.filter((p: Product) => !p.archived);
   const salesToday = invoices.filter((i: Invoice) => i.date === today());
   const sold = salesToday.reduce((n: number, i: Invoice) => n + i.total, 0);
   const units = products.reduce((n: number, p: Product) => n + p.stock, 0);
@@ -2608,6 +2680,7 @@ function POS(p: any) {
     [manual, setManual] = useState(""),
     [showCustomer, setShowCustomer] = useState(false);
   const list = p.products
+    .filter((x: Product) => !x.archived)
     .filter(
       (x: Product) =>
         [x.name, x.sku, x.barcode, x.imei || "", x.brand]
@@ -3105,167 +3178,6 @@ function POS(p: any) {
   );
 }
 
-function Inventory({
-  products,
-  devices,
-  search,
-  setSearch,
-  category,
-  setCategory,
-  setModal,
-  setSelectedProduct,
-  csv,
-}: any) {
-  return (
-    <div className="screen">
-      <Heading
-        eyebrow="INVENTORY / CATALOGUE"
-        title={
-          <>
-            Everything in <em>stock.</em>
-          </>
-        }
-        description="Device tracking, bulk accessories and current prices."
-        action={
-          <>
-            <Btn kind="secondary" onClick={csv}>
-              <Download size={15} /> Export CSV
-            </Btn>
-            <Btn onClick={() => setModal("product")}>
-              <Plus size={16} /> Add product
-            </Btn>
-          </>
-        }
-      />
-      <div className="inventory-metrics">
-        <div>
-          <span>Visible records</span>
-          <strong>{products.length.toString().padStart(2, "0")}</strong>
-        </div>
-        <div>
-          <span>Units in stock</span>
-          <strong>
-            {products.reduce((s: number, p: Product) => s + p.stock, 0)}
-          </strong>
-        </div>
-        <div>
-          <span>Low stock</span>
-          <strong className="red-number">
-            {products.filter((p: Product) => p.stock <= 5).length}
-          </strong>
-        </div>
-      </div>
-      <div className="panel">
-        <div className="toolbar">
-          <label className="search-field">
-            <Search size={17} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search model, SKU, barcode, IMEI or supplier code…"
-            />
-            <kbd>/</kbd>
-          </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            <option>All</option>
-            <option>Smartphones</option>
-            <option>China phones</option>
-            <option>Keypad phones</option>
-            <option>Accessories</option>
-          </select>
-          <Btn
-            kind="secondary"
-            onClick={() => {
-              setSearch("");
-              setCategory("All");
-            }}
-          >
-            <SlidersHorizontal size={15} /> Reset
-          </Btn>
-        </div>
-        <Table
-          headers={[
-            "Product / SKU",
-            "Category",
-            "Supplier",
-            "Barcode / IMEI",
-            "Stock",
-            "Purchase cost",
-            "Wholesale",
-            "Retail",
-            "",
-          ]}
-        >
-          {products.map((p: Product) => (
-            <tr key={p.id}>
-              <td>
-                <button
-                  className="table-link"
-                  onClick={() => setSelectedProduct(p.id)}
-                >
-                  <strong>{p.name}</strong>
-                  <small>
-                    {p.variant} · {p.sku}
-                  </small>
-                </button>
-              </td>
-              <td>
-                <span className="category-tag">{p.category}</span>
-              </td>
-              <td>
-                <span className="code">{p.supplierCode || "—"}</span>
-              </td>
-              <td>
-                <span className="mono">
-                  {p.tracking === "Quantity"
-                    ? p.barcode
-                    : devices.filter((d: DeviceUnit) => d.productId === p.id)
-                        .length + " tracked unit(s)"}
-                </span>
-                <small>
-                  {p.tracking === "IMEI"
-                    ? "IMEI 1 + IMEI 2 · per handset"
-                    : p.tracking === "Serial"
-                      ? "Serial tracked"
-                      : "Quantity tracked"}
-                </small>
-              </td>
-              <td>
-                <strong>{p.stock}</strong>
-                <small>{p.stock <= 5 ? "Reorder soon" : "units"}</small>
-              </td>
-              <td className="numeric">{money(p.purchaseCost)}</td>
-              <td className="numeric">{money(p.wholesalePrice)}</td>
-              <td className="numeric">
-                <strong>{money(p.retailPrice)}</strong>
-              </td>
-              <td>
-                <button
-                  className="mini-icon"
-                  onClick={() => setSelectedProduct(p.id)}
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </Table>
-        {!products.length && (
-          <Empty
-            title="No matching products"
-            detail="Change the search or category filter."
-          />
-        )}
-        <div className="table-footer">
-          Showing {products.length} records · browser demo data
-        </div>
-      </div>
-    </div>
-  );
-}
 function PriceManager({
   products,
   edits,
@@ -4325,8 +4237,26 @@ function Returns({ invoices, devices, returns, onReturn }: any) {
     </section>
   );
 }
-function Movements({ products, invoices, purchases = [], returns = [] }: any) {
+function Movements({
+  products,
+  invoices,
+  purchases = [],
+  returns = [],
+  stockAudit = [],
+}: any) {
   const rows = [
+    ...stockAudit.map((a: StockAudit) => ({
+      id: a.id,
+      date: a.at.slice(0, 10),
+      ref: a.label,
+      type: "Stock correction · " + a.action,
+      party: a.reason,
+      qty:
+        a.scope === "device"
+          ? (a.after.status === "In stock" ? 1 : 0) -
+            (a.before.status === "In stock" ? 1 : 0)
+          : Number(a.after.stock || 0) - Number(a.before.stock || 0),
+    })),
     ...invoices.map((i: Invoice) => ({
       id: i.id,
       date: i.date,

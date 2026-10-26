@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:schema": "node scripts/schema-test.mjs",
     "test:e2e": "node scripts/e2e.cjs",
-    "test:imports": "node --import tsx scripts/import-test.ts"
+    "test:imports": "node --import tsx scripts/import-test.ts",
+    "test:stock": "node --import tsx scripts/stock-test.ts"
   },
   "dependencies": {
     "iron-session": "^9.0.1",

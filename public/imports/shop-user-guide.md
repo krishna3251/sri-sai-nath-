@@ -91,3 +91,43 @@ The current app stores records in this browser, not a connected database. Anothe
 There is no shared Neon persistence, cross-device stock ledger, individual staff authorization, external payment ledger, automatic refunds/credit notes or Tally connector. Reports describe saved local records; sample balances are labelled as sample. A successful local import or invoice is not proof of an external accounting entry.
 
 If a storage warning appears, stop relying on automatic saves, keep the tab open and export a backup. The guide itself remains usable even when its checklist cannot be saved.
+
+## 13. Edit stock, correct a party code, or select several phones
+
+Open **Products & Stock**. It has three views:
+
+- **Product models**: shared name, RAM/storage/colour, SKU, default supplier, default purchase cost and selling prices.
+- **Phones & serials**: the actual physical units, with individual IMEIs, supplier codes, costs and status.
+- **Change history**: stock-manager corrections saved with their reason and before/after values.
+
+### Edit one model
+
+Click Edit model. Correct the details and enter a reason. The model’s default party code is used for future receiving. It does not silently rewrite all existing handset suppliers. If the supplier code was wrong for currently available units too, deliberately tick **Also correct the supplier**. Sold, removed and returned units are not affected by that checkbox. A model’s default cost is different from the cost recorded on each physical phone.
+
+Selling price changes affect future bills. Issued invoice snapshots keep the original price and identifiers. Tracking mode is intentionally not editable here: changing a phone into a quantity-managed item would break its device history.
+
+### Select and edit several handsets
+
+Open Phones & serials. Filter by supplier, model/SKU, IMEI, category or status. Tick the individual rows, or use Select all visible stock rows. Changing filters clears selection; actions apply only to the selected rows in the current view.
+
+Use **Change party code** or **Change unit cost** for the selected available phones. Choose an existing supplier code; add a new supplier in Customers & Suppliers first. Review the selection, enter a reason and confirm. A bulk change is rejected as a whole if a selected record is ineligible.
+
+### Correct an IMEI typing mistake
+
+Click Edit handset for an available unit. Check the actual box first. IMEI 1 and optional IMEI 2 must be valid and must not already belong to any other unit, including a sold or removed one. Once a unit has invoice history its IMEI/serial identity is locked here, even if it later returns to stock. A handset in the current draft bill must be removed from that bill before stock corrections.
+
+### Remove or mark damaged
+
+Select the exact available phones and choose Remove from stock or Mark damaged. Review the identifiers and enter the reason. These actions reduce available stock; they do not issue a sale, supplier-return voucher, refund or credit note. Device records, both IMEIs and invoice links are retained.
+
+To recover a removed or damaged phone, filter for its status, select it and choose Send to inspection. It stays unavailable. Finish inspection in IMEI & Serial Tracking; only Inspection passed makes it saleable again. Genuine supplier/customer returns should still use their dedicated Returns screens.
+
+### Count accessories or archive a discontinued model
+
+For quantity-managed accessories use Adjust quantity. Enter the actual physical count, not the amount to add/subtract, and a reason. The count cannot fall below units in the current draft bill. Phones are adjusted by selecting exact devices or receiving actual identifiers, never by inventing a numeric count.
+
+A model can be archived only when it has no available stock. Its history remains. Choose Archived in the availability filter to find and restore it. Restoring a model makes it visible; it does not add stock. Restore an archived model before importing new stock for that SKU.
+
+### Useful extras
+
+Export selected models or phones as CSV. Both IMEIs remain in selected-device exports. Download a Count sheet to record physical counts. Use supplier/category/status filters and sorting to work through low-stock items. Change history can be exported; the complete JSON backup now includes these corrections too. These are local correction records for this browser, not an immutable shared database audit trail or a record of an individually authenticated staff member.

@@ -215,6 +215,12 @@ export function prepareImport(
       return;
     }
     let p = products.find((p) => p.sku.toUpperCase() === sku);
+    if (p?.archived) {
+      issue(
+        "Restore this archived SKU in Stock Manager before receiving or updating it.",
+      );
+      return;
+    }
     if (
       p &&
       (p.name.trim().toLowerCase() !== r.name.trim().toLowerCase() ||

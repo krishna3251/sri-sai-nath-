@@ -121,7 +121,7 @@ CREATE TABLE devices (
   supplier_id uuid REFERENCES parties(id),
   purchase_cost numeric(14,2) NOT NULL DEFAULT 0 CHECK (purchase_cost >= 0),
   device_status text NOT NULL DEFAULT 'in_stock'
-    CHECK (device_status IN ('in_stock','reserved','sold','returned_to_supplier','returned_by_customer','damaged','under_inspection')),
+    CHECK (device_status IN ('in_stock','reserved','sold','returned_to_supplier','returned_by_customer','damaged','under_inspection','removed')),
   current_invoice_line_id uuid,
   received_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),

@@ -80,8 +80,8 @@ export const guideSteps = [
   {
     title: "Find & check stock",
     screen: "IMEI & Serial Tracking",
-    text: "Search either IMEI to find the physical handset. In stock means available for sale; Sold means it has left stock. Customer returns enter Under inspection and stay unavailable until inspected.",
-    tip: "Products & Stock shows available quantity by model. A low-stock alert means five or fewer units remain.",
+    text: "Search either IMEI to find a handset. Products & Stock now has Product models, Phones & serials, and Change history. Edit models or select exact phones to correct party codes, costs, or availability. Removed and damaged phones stay unavailable until inspected.",
+    tip: "Every stock-manager correction needs a reason. Models with stock cannot be archived. Removed unit identities are kept, and issued invoices remain unchanged.",
   },
   {
     title: "Review bills & accounts",
