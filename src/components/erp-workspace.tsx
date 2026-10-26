@@ -1,4 +1,5 @@
 "use client";
+import MobileNavigation from "@/components/mobile-navigation";
 import StockManager from "@/components/stock-manager";
 import {
   applyStockCommand,
@@ -589,6 +590,15 @@ export default function Page() {
   >("Purchase In");
   const [screen, setScreen] = useState<Screen>("Dashboard"),
     [mobileNav, setMobileNav] = useState(false);
+  useDialogFocus(mobileNav, () => setMobileNav(false));
+  useEffect(() => {
+    if (!mobileNav) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileNav]);
   const [products, setProducts] = useState<Product[]>(seedProducts),
     [devices, setDevices] = useState<DeviceUnit[]>(seedDevices),
     [parties, setParties] = useState<Party[]>(seedParties),
@@ -2097,7 +2107,13 @@ export default function Page() {
           onClick={() => setMobileNav(false)}
         />
       )}
-      <aside className={"sidebar " + (mobileNav ? "sidebar-open" : "")}>
+      <aside
+        id="shop-navigation"
+        role={mobileNav ? "dialog" : undefined}
+        aria-modal={mobileNav || undefined}
+        aria-label="Shop navigation"
+        className={"sidebar " + (mobileNav ? "sidebar-open" : "")}
+      >
         <div className="brand">
           <div className="chosen-logo sidebar-logo">
             <img
@@ -2173,6 +2189,8 @@ export default function Page() {
             className="icon-btn mobile-menu"
             onClick={() => setMobileNav(true)}
             aria-label="Open menu"
+            aria-controls="shop-navigation"
+            aria-expanded={mobileNav}
           >
             <Menu size={19} />
           </button>
@@ -2252,6 +2270,19 @@ export default function Page() {
           )}
         </div>
       </main>
+      {hydrated && (
+        <MobileNavigation
+          screen={screen}
+          navigate={(destination) => {
+            go(destination);
+            window.scrollTo({ top: 0, behavior: "instant" });
+          }}
+          openMenu={() => setMobileNav(true)}
+          menuOpen={mobileNav}
+          itemCount={cart.reduce((sum, line) => sum + line.qty, 0)}
+          total={money(total)}
+        />
+      )}
       {hydrated && <Guide screen={screen} go={(s) => go(s as Screen)} />}
       {notice && (
         <div className="toast" role="status" aria-live="polite">
@@ -3083,7 +3114,7 @@ function POS(p: any) {
               })()}
           </div>
         </section>
-        <aside className="checkout-panel" data-tour="checkout">
+        <aside id="checkout-summary" tabIndex={-1} aria-label="Review current bill" className="checkout-panel" data-tour="checkout">
           <div className="checkout-head">
             <span className="eyebrow">04 / CHECKOUT</span>
             <span className="invoice-id">DRAFT / LOCAL</span>

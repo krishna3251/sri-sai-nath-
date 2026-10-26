@@ -137,3 +137,9 @@ Export selected models or phones as CSV. Both IMEIs remain in selected-device ex
 Upload your CSV or paste WhatsApp text in Imports & exports. If every quantity is blank, the ERP selects Models & prices only. It adds your catalogue without inventing stock or prices.
 
 For physically received goods, enter quantity, purchase cost and a unique bill/delivery reference. Party code, IMEIs and serial numbers are optional at import. Missing identifiers appear as **Needs identification** in Products & Stock → Phones & serials. Choose **Add identifiers**, enter the real identifiers and save with a reason. Then check the phone and choose **Inspection passed** in IMEI & Serial Tracking. It becomes available for billing only after that check. Assign supplier codes later with **Change party code**. Never receive the same list a second time just to add identifiers.
+
+## Using the ERP on your phone
+
+Use the bottom bar: **Home** for your shop overview, **Sale** to bill, **Stock** to manage products and phones, and **Import** for CSV or WhatsApp lists. **More** opens all the other modules, including Purchase In, returns and settings. The full-width search at the top finds products, IMEIs, parties and invoices.
+
+While building a sale, the current amount appears above the bottom bar. Tap **Review bill** to jump to payment and checkout. Check the identifiers, prices and total before saving the demo sale. Forms stack vertically, so scroll down to finish a product or import row. Close a dialog or the module menu with its close button. Use **Help & setup** to resume the guide.
